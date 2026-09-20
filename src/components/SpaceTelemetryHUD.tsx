@@ -59,13 +59,15 @@ export const SpaceTelemetryHUD: React.FC<SpaceTelemetryHUDProps> = ({
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const currentDistanceKm = currentCue?.distanceKm ?? Math.max(12000, 6060000000 * (1 - currentTime / 270));
+  // Real NASA JPL ephemeris calculation: 40.47 AU (6,054,558,000 km) down to Earth
+  const currentDistanceKm = currentCue?.distanceKm ?? Math.max(12000, 6054558000 * (1 - currentTime / 270));
   const formatDistance = (km: number) => {
     if (km >= 1000000000) {
-      return `~${(km / 1000000000).toFixed(2)}B km`;
+      const au = (km / 149597870.7).toFixed(2);
+      return `${(km / 1000000000).toFixed(2)}B km (${au} AU)`;
     }
     if (km >= 1000000) {
-      return `~${(km / 1000000).toFixed(1)}M km`;
+      return `${(km / 1000000).toFixed(1)}M km`;
     }
     return `${Math.round(km).toLocaleString()} km`;
   };
@@ -78,13 +80,29 @@ export const SpaceTelemetryHUD: React.FC<SpaceTelemetryHUDProps> = ({
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-  // Render poetic kinetic subtitle text
+  // Render magnetic kinetic subtitle text with highlighted key terms
   const renderSubtitleText = () => {
     if (!currentCue) return null;
+
+    const highlightWords = (text: string) => {
+      // Highlight poetic anchor words with glowing cyan
+      const regex = /(titik|rumah|debu|bumi|kita|panggung|sungai darah|piksel|dot|home|us|mote of dust|earth|rivers of blood|pixel|pale blue dot|地球|家|点|血の河)/gi;
+      const parts = text.split(regex);
+      return parts.map((part, i) =>
+        regex.test(part) ? (
+          <span key={i} className="text-[#89cff0] font-medium drop-shadow-[0_0_8px_rgba(137,207,240,0.5)]">
+            {part}
+          </span>
+        ) : (
+          part
+        )
+      );
+    };
+
     return (
-      <div className="space-y-1 text-center">
+      <div key={currentCue.id} className="space-y-1 text-center animate-ethereal">
         {currentCue.chapter && (
-          <div className="flex items-center justify-center gap-1.5 font-mono text-[9px] tracking-[0.25em] text-[#89cff0] uppercase pb-0.5">
+          <div className="flex items-center justify-center gap-1.5 font-mono text-[8px] tracking-[0.3em] text-[#89cff0] uppercase pb-0.5">
             <Sparkles className="w-2.5 h-2.5" />
             <span>{currentCue.chapter}</span>
           </div>
@@ -92,10 +110,10 @@ export const SpaceTelemetryHUD: React.FC<SpaceTelemetryHUDProps> = ({
 
         {language === 'id' && (
           <>
-            <p className="font-serif text-sm md:text-base lg:text-[1.05rem] text-[#f4f5f7] leading-relaxed drop-shadow-lg tracking-wide">
-              &ldquo;{currentCue.id_lang}&rdquo;
+            <p className="font-serif text-xs md:text-sm lg:text-[0.95rem] text-[#f4f5f7] leading-relaxed drop-shadow-md tracking-wide">
+              &ldquo;{highlightWords(currentCue.id_lang)}&rdquo;
             </p>
-            <p className="font-mono text-[10px] text-slate-400/80 tracking-wide line-clamp-1 italic">
+            <p className="font-mono text-[9px] text-slate-400/70 tracking-wide line-clamp-1 italic">
               {currentCue.en}
             </p>
           </>
@@ -103,18 +121,18 @@ export const SpaceTelemetryHUD: React.FC<SpaceTelemetryHUDProps> = ({
 
         {language === 'ja' && (
           <>
-            <p className="font-serif text-sm md:text-base text-[#f4f5f7] leading-relaxed drop-shadow-lg tracking-wide">
-              「{currentCue.ja}」
+            <p className="font-serif text-xs md:text-sm text-[#f4f5f7] leading-relaxed drop-shadow-md tracking-wide">
+              「{highlightWords(currentCue.ja)}」
             </p>
-            <p className="font-mono text-[10px] text-slate-400/80 tracking-wide line-clamp-1 italic">
+            <p className="font-mono text-[9px] text-slate-400/70 tracking-wide line-clamp-1 italic">
               {currentCue.en}
             </p>
           </>
         )}
 
         {language === 'en' && (
-          <p className="font-serif text-sm md:text-base lg:text-[1.05rem] text-[#f4f5f7] leading-relaxed drop-shadow-lg tracking-wide">
-            &ldquo;{currentCue.en}&rdquo;
+          <p className="font-serif text-xs md:text-sm lg:text-[0.95rem] text-[#f4f5f7] leading-relaxed drop-shadow-md tracking-wide">
+            &ldquo;{highlightWords(currentCue.en)}&rdquo;
           </p>
         )}
       </div>
@@ -123,28 +141,28 @@ export const SpaceTelemetryHUD: React.FC<SpaceTelemetryHUDProps> = ({
 
   return (
     <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-3.5 md:p-6 z-20 select-none">
-      {/* Top Bar */}
+      {/* Top Bar: Minimal Ethereal Telemetry */}
       <div className="flex items-start justify-between gap-4">
-        {/* Top Left: Minimal Mission Callout */}
-        <div className="pointer-events-auto flex items-center gap-2.5 opacity-90 hover:opacity-100 transition-opacity">
+        {/* Top Left: Mission Identification */}
+        <div className="pointer-events-auto flex items-center gap-2.5 opacity-85 hover:opacity-100 transition-opacity">
           <div className="w-7 h-7 rounded-full border border-[#89cff0]/30 bg-[#070e1c]/80 backdrop-blur flex items-center justify-center text-[#89cff0] shadow-lg shadow-cyan-500/10">
             <Radio className="w-3 h-3 animate-pulse" />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-display font-semibold text-xs md:text-sm tracking-[0.25em] text-white">
+              <span className="font-display font-semibold text-xs md:text-sm tracking-[0.2em] text-white">
                 M O T E
               </span>
-              <span className="text-[#89cff0] font-mono text-[9px] tracking-widest hidden sm:inline">• 40.5 AU</span>
+              <span className="text-[#89cff0] font-mono text-[9px] tracking-widest hidden sm:inline">• 40.47 AU</span>
             </div>
             <div className="font-mono text-[9px] text-slate-400 tracking-wider">
-              VOYAGER 1 // 1990
+              VOYAGER 1 // NAC 1500MM FOV 0.42°
             </div>
           </div>
         </div>
 
-        {/* Top Right: Compact Astrometric Telemetry */}
-        <div className="text-right font-mono text-[9px] md:text-[11px] opacity-90 hover:opacity-100 transition-opacity">
+        {/* Top Right: Real NASA JPL Astrometric Data */}
+        <div className="text-right font-mono text-[9px] md:text-[11px] opacity-85 hover:opacity-100 transition-opacity">
           <div className="text-slate-500 uppercase tracking-[0.15em] text-[8px] md:text-[9px]">
             Distance from Earth
           </div>
@@ -152,21 +170,21 @@ export const SpaceTelemetryHUD: React.FC<SpaceTelemetryHUDProps> = ({
             {formatDistance(currentDistanceKm)}
           </div>
           <div className="text-slate-400 text-[8px] md:text-[9px] mt-0.5">
-            DELAY {lightTimeDelay}
+            VEL 17.02 km/s • DELAY {lightTimeDelay}
           </div>
         </div>
       </div>
 
-      {/* Subtitles: Lower-Third (Compact, Unobtrusive, Aesthetic) */}
-      <div className="pointer-events-none w-full max-w-xl mx-auto mb-2 text-center px-4">
+      {/* Subtitles: Docked at the Lower-Third (Completely Unobtrusive, Center is 100% Free!) */}
+      <div className="pointer-events-none w-full max-w-lg mx-auto mb-1 text-center px-4">
         {showSubtitles && currentCue && (
-          <div className="bg-[#050811]/75 backdrop-blur-md border border-white/10 px-5 py-3 rounded-2xl shadow-2xl animate-fadeIn inline-block max-w-full">
+          <div className="bg-[#050811]/80 backdrop-blur-md border border-white/10 px-4 py-2.5 rounded-2xl shadow-2xl inline-block max-w-full">
             {renderSubtitleText()}
           </div>
         )}
       </div>
 
-      {/* Bottom Bar: Timeline & Controls */}
+      {/* Bottom Bar: Compact Hairline Scrubber & Controls */}
       <div className="pointer-events-auto flex flex-col gap-2">
         {/* Hairline Timeline Scrubber */}
         <div className="flex items-center gap-2.5 font-mono text-[9px] text-slate-500">

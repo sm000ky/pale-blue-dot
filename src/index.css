@@ -4,12 +4,11 @@
 
 @layer base {
   body {
-    background-color: #05070c;
+    background-color: #020408;
     color: #f3f4f6;
     font-family: 'Newsreader', Georgia, serif;
   }
 
-  /* Custom Range Input */
   input[type='range'] {
     -webkit-appearance: none;
     background: #1c2438;
@@ -26,17 +25,19 @@
   }
 }
 
-@keyframes fadeIn {
-  from {
+@keyframes etherealReveal {
+  0% {
     opacity: 0;
+    filter: blur(8px);
     transform: translateY(6px);
   }
-  to {
+  100% {
     opacity: 1;
+    filter: blur(0);
     transform: translateY(0);
   }
 }
 
-.animate-fadeIn {
-  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+.animate-ethereal {
+  animation: etherealReveal 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
