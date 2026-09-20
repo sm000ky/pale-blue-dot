@@ -34,6 +34,12 @@ interface SpaceTelemetryHUDProps {
   onOpenVault: () => void;
 }
 
+interface ActiveSubtitleSlot {
+  key: string;
+  cue: SubtitleCue;
+  opacity: number; // 0 to 1
+}
+
 export const SpaceTelemetryHUD: React.FC<SpaceTelemetryHUDProps> = ({
   currentTime,
   duration,
@@ -53,46 +59,49 @@ export const SpaceTelemetryHUD: React.FC<SpaceTelemetryHUDProps> = ({
 }) => {
   const [showSubtitles, setShowSubtitles] = useState<boolean>(true);
 
-  // Organic Hollywood Film Dissolve State Machine
-  // activeCue: The cue text that stays in DOM so it can dissolve out smoothly without snapping!
-  // isVisible: Controls CSS opacity & blur transition
-  const [activeCue, setActiveCue] = useState<SubtitleCue | null>(currentCue);
-  const [isVisible, setIsVisible] = useState<boolean>(Boolean(currentCue));
-  const transitionTimerRef = useRef<any>(null);
+  // True Two-Layer Film Crossfade Buffer (Hardware Accelerated Compositor Blending)
+  // Ensures incoming text dissolves in while outgoing text dissolves out simultaneously!
+  const [slots, setSlots] = useState<ActiveSubtitleSlot[]>([]);
+  const lastCueIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (transitionTimerRef.current) {
-      clearTimeout(transitionTimerRef.current);
-    }
+    const currentId = currentCue?.id ?? null;
+    if (currentId === lastCueIdRef.current) return;
+    lastCueIdRef.current = currentId;
 
     if (currentCue) {
-      if (activeCue && activeCue.id !== currentCue.id) {
-        // Cue changed from A to B: Dissolve out A smoothly, then fade in B
-        setIsVisible(false);
-        transitionTimerRef.current = setTimeout(() => {
-          setActiveCue(currentCue);
-          setIsVisible(true);
-        }, 320); // 320ms organic dissolve-out
-      } else {
-        // First cue or reappearing after pause: Fade in directly
-        setActiveCue(currentCue);
-        // Next tick to trigger CSS transition
-        const r = requestAnimationFrame(() => {
-          setIsVisible(true);
-        });
-        return () => cancelAnimationFrame(r);
-      }
-    } else {
-      // Pause in speech: Gently dissolve away (Keep activeCue in DOM so it fades out gracefully!)
-      setIsVisible(false);
-      transitionTimerRef.current = setTimeout(() => {
-        setActiveCue(null);
-      }, 750); // 750ms slow, poetic fade out into the stars
-    }
+      const newKey = `${currentCue.id}-${Date.now()}`;
+      setSlots((prev) => {
+        // Mark all existing slots to fade out (opacity 0)
+        const updated = prev.map((s) => ({ ...s, opacity: 0 }));
+        // Add incoming slot initially with opacity 0, then fade in
+        return [...updated, { key: newKey, cue: currentCue, opacity: 0 }];
+      });
 
-    return () => {
-      if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
-    };
+      // Next frame: trigger fade-in of incoming slot
+      const r = requestAnimationFrame(() => {
+        setSlots((prev) =>
+          prev.map((s) => (s.key === newKey ? { ...s, opacity: 1 } : s))
+        );
+      });
+
+      // Cleanup faded-out slots after 1000ms transition finishes
+      const t = setTimeout(() => {
+        setSlots((prev) => prev.filter((s) => s.key === newKey));
+      }, 1050);
+
+      return () => {
+        cancelAnimationFrame(r);
+        clearTimeout(t);
+      };
+    } else {
+      // Speech pause: fade out all active slots smoothly
+      setSlots((prev) => prev.map((s) => ({ ...s, opacity: 0 })));
+      const t = setTimeout(() => {
+        setSlots([]);
+      }, 1050);
+      return () => clearTimeout(t);
+    }
   }, [currentCue]);
 
   const formatTime = (secs: number) => {
@@ -122,61 +131,17 @@ export const SpaceTelemetryHUD: React.FC<SpaceTelemetryHUDProps> = ({
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-  // Pure floating typography with glowing cyan highlights
-  const renderSubtitleContent = () => {
-    if (!activeCue) return null;
-
-    const highlightWords = (text: string) => {
-      const regex = /(titik|rumah|debu|bumi|kita|panggung|sungai darah|piksel|dot|home|us|mote of dust|earth|rivers of blood|pixel|pale blue dot|地球|家|点|血の河)/gi;
-      const parts = text.split(regex);
-      return parts.map((part, i) =>
-        regex.test(part) ? (
-          <span key={i} className="text-[#89cff0] font-medium drop-shadow-[0_0_12px_rgba(137,207,240,0.6)]">
-            {part}
-          </span>
-        ) : (
-          part
-        )
-      );
-    };
-
-    return (
-      <div className="space-y-0.5 text-center max-w-xl mx-auto pointer-events-none select-none px-4">
-        {activeCue.chapter && (
-          <div className="flex items-center justify-center gap-1.5 font-mono text-[8px] tracking-[0.3em] text-[#89cff0]/80 uppercase pb-0.5">
-            <Sparkles className="w-2.5 h-2.5" />
-            <span>{activeCue.chapter}</span>
-          </div>
-        )}
-
-        {language === 'id' && (
-          <>
-            <p className="font-serif text-xs md:text-sm lg:text-[0.95rem] text-[#f4f5f7] leading-relaxed drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)] tracking-wide">
-              &ldquo;{highlightWords(activeCue.id_lang)}&rdquo;
-            </p>
-            <p className="font-mono text-[9px] text-slate-400/70 tracking-wide line-clamp-1 italic drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
-              {activeCue.en}
-            </p>
-          </>
-        )}
-
-        {language === 'ja' && (
-          <>
-            <p className="font-serif text-xs md:text-sm text-[#f4f5f7] leading-relaxed drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)] tracking-wide">
-              「{highlightWords(activeCue.ja)}」
-            </p>
-            <p className="font-mono text-[9px] text-slate-400/70 tracking-wide line-clamp-1 italic drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
-              {activeCue.en}
-            </p>
-          </>
-        )}
-
-        {language === 'en' && (
-          <p className="font-serif text-xs md:text-sm lg:text-[0.95rem] text-[#f4f5f7] leading-relaxed drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)] tracking-wide">
-            &ldquo;{highlightWords(activeCue.en)}&rdquo;
-          </p>
-        )}
-      </div>
+  const highlightWords = (text: string) => {
+    const regex = /(titik|rumah|debu|bumi|kita|panggung|sungai darah|piksel|dot|home|us|mote of dust|earth|rivers of blood|pixel|pale blue dot|地球|家|点|血の河)/gi;
+    const parts = text.split(regex);
+    return parts.map((part, i) =>
+      regex.test(part) ? (
+        <span key={i} className="text-[#89cff0] font-medium drop-shadow-[0_0_12px_rgba(137,207,240,0.6)]">
+          {part}
+        </span>
+      ) : (
+        part
+      )
     );
   };
 
@@ -216,21 +181,59 @@ export const SpaceTelemetryHUD: React.FC<SpaceTelemetryHUDProps> = ({
         </div>
       </div>
 
-      {/* BOTTOM SECTION: SUBTITLES + SCRUBBER + CONTROLS (Anchored strictly to the bottom margin!) */}
+      {/* BOTTOM SECTION: SUBTITLES + SCRUBBER + CONTROLS */}
       <div className="pointer-events-auto flex flex-col gap-2 w-full max-w-4xl mx-auto">
-        {/* SUBTITLES DOCKED DIRECTLY AT THE BOTTOM (ZERO BACKGROUND BOX, TRUE HOLLYWOOD FILM DISSOLVE) */}
-        <div className="pointer-events-none w-full min-h-[50px] flex items-end justify-center">
-          {showSubtitles && (
-            <div
-              className={`transition-all duration-700 ease-out transform ${
-                isVisible
-                  ? 'opacity-100 filter-none translate-y-0 scale-100'
-                  : 'opacity-0 blur-md translate-y-2 scale-[0.98]'
-              }`}
-            >
-              {renderSubtitleContent()}
-            </div>
-          )}
+        {/* SUBTITLES DOCKED DIRECTLY AT THE BOTTOM (TWO-LAYER HARDWARE COMPOSITED CROSSFADE) */}
+        <div className="pointer-events-none w-full min-h-[54px] relative flex items-end justify-center">
+          {showSubtitles &&
+            slots.map((slot) => {
+              const cue = slot.cue;
+              return (
+                <div
+                  key={slot.key}
+                  style={{
+                    opacity: slot.opacity,
+                    transition: 'opacity 900ms cubic-bezier(0.4, 0, 0.2, 1)'
+                  }}
+                  className="absolute inset-x-0 bottom-0 flex flex-col items-center justify-end text-center pointer-events-none px-4"
+                >
+                  {cue.chapter && (
+                    <div className="flex items-center justify-center gap-1.5 font-mono text-[8px] tracking-[0.3em] text-[#89cff0]/80 uppercase pb-0.5">
+                      <Sparkles className="w-2.5 h-2.5" />
+                      <span>{cue.chapter}</span>
+                    </div>
+                  )}
+
+                  {language === 'id' && (
+                    <>
+                      <p className="font-serif text-xs md:text-sm lg:text-[0.95rem] text-[#f4f5f7] leading-relaxed drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)] tracking-wide">
+                        &ldquo;{highlightWords(cue.id_lang)}&rdquo;
+                      </p>
+                      <p className="font-mono text-[9px] text-slate-400/70 tracking-wide line-clamp-1 italic drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+                        {cue.en}
+                      </p>
+                    </>
+                  )}
+
+                  {language === 'ja' && (
+                    <>
+                      <p className="font-serif text-xs md:text-sm text-[#f4f5f7] leading-relaxed drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)] tracking-wide">
+                        「{highlightWords(cue.ja)}」
+                      </p>
+                      <p className="font-mono text-[9px] text-slate-400/70 tracking-wide line-clamp-1 italic drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+                        {cue.en}
+                      </p>
+                    </>
+                  )}
+
+                  {language === 'en' && (
+                    <p className="font-serif text-xs md:text-sm lg:text-[0.95rem] text-[#f4f5f7] leading-relaxed drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)] tracking-wide">
+                      &ldquo;{highlightWords(cue.en)}&rdquo;
+                    </p>
+                  )}
+                </div>
+              );
+            })}
         </div>
 
         {/* Hairline Timeline Scrubber */}
