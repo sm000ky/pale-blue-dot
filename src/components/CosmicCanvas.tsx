@@ -16,10 +16,10 @@ export const PLANET_POIS: PlanetPOI[] = [
   {
     id: 'tokyo',
     name: 'Metropolis of Lights',
-    jpName: '光のメガロポリス',
+    jpName: '光のメガロポリス (東京)',
     lat: 35.6762,
     lon: 139.6503,
-    description: '38 million human lives flickering like distant fireflies on the dark side of the globe.'
+    description: '38 million human souls flickering like golden embers against the vast obsidian sea.'
   },
   {
     id: 'himalayas',
@@ -27,7 +27,7 @@ export const PLANET_POIS: PlanetPOI[] = [
     jpName: '世界の屋根 (ヒマラヤ)',
     lat: 27.9881,
     lon: 86.9250,
-    description: 'The highest frozen sanctuary on Earth, formed by continents crashing in slow motion across eons.'
+    description: 'Ancient sea beds lifted eight kilometers into the stratosphere by crashing tectonic plates.'
   },
   {
     id: 'sahara',
@@ -35,7 +35,7 @@ export const PLANET_POIS: PlanetPOI[] = [
     jpName: 'サハラ砂漠',
     lat: 23.4162,
     lon: 12.8628,
-    description: 'A sea of silence where the sun reigns supreme over ancient dried ocean beds.'
+    description: 'A quiet ocean of golden sand where the sun burns uninterrupted over eons of silence.'
   },
   {
     id: 'amazon',
@@ -43,7 +43,7 @@ export const PLANET_POIS: PlanetPOI[] = [
     jpName: 'アマゾンの密林',
     lat: -3.4653,
     lon: -62.2159,
-    description: 'Generating one-fifth of the oxygen that every breathing creature on this pixel shares.'
+    description: 'A breathing emerald mantle generating oxygen for billions of living creatures.'
   },
   {
     id: 'mariana',
@@ -51,7 +51,7 @@ export const PLANET_POIS: PlanetPOI[] = [
     jpName: 'マリアナ海溝',
     lat: 11.3493,
     lon: 142.1995,
-    description: 'Eleven kilometers of pitch-black saltwater, shielding primordial mysteries from the stars.'
+    description: 'Eleven kilometers of saltwater pressure, cloaked in eternal darkness since Earth formed.'
   }
 ];
 
@@ -81,20 +81,18 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
   const earthGroupRef = useRef<THREE.Group | null>(null);
   const earthMeshRef = useRef<THREE.Mesh | null>(null);
   const cloudsMeshRef = useRef<THREE.Mesh | null>(null);
-  const sunbeamMeshRef = useRef<THREE.Mesh | null>(null);
+  const moonGroupRef = useRef<THREE.Group | null>(null);
   const goldenRecordGroupRef = useRef<THREE.Group | null>(null);
   const goldenRecordMeshRef = useRef<THREE.Mesh | null>(null);
   const dustParticlesRef = useRef<THREE.Points | null>(null);
   const poiPinsGroupRef = useRef<THREE.Group | null>(null);
 
-  // Mouse Parallax & Orbit state
   const mousePointerRef = useRef({ x: 0, y: 0 });
   const isDraggingRef = useRef(false);
   const previousPointerRef = useRef({ x: 0, y: 0 });
   const orbitRotationRef = useRef({ x: 0.25, y: -0.6 });
   const orbitDistanceRef = useRef(32);
 
-  // Helper: lat/lon to 3D vector on sphere of radius R
   const latLonToVector3 = (lat: number, lon: number, radius: number) => {
     const phi = (90 - lat) * (Math.PI / 180);
     const theta = (lon + 180) * (Math.PI / 180);
@@ -108,9 +106,9 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
     const container = containerRef.current;
     if (!container) return;
 
-    // 1. Scene & Deep Space Fog
+    // 1. Scene & Deep Cosmic Atmosphere
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x020408, 0.00028);
+    scene.fog = new THREE.FogExp2(0x020408, 0.00022);
     sceneRef.current = scene;
 
     // 2. Camera with Narrow Telephoto Lens
@@ -119,7 +117,7 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
     camera.position.set(0, 40, 1200);
     cameraRef.current = camera;
 
-    // 3. Renderer with ACES Filmic Tone Mapping
+    // 3. WebGL Renderer with High-DPI & Tone Mapping
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
       powerPreference: 'high-performance',
@@ -128,20 +126,65 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.2;
+    renderer.toneMappingExposure = 1.35;
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
     const textureLoader = new THREE.TextureLoader();
 
-    // 4. Starfield (4,000 multi-colored distant stars)
+    // 4. Procedural Galactic Nebula Clouds (Volumetric Cosmic Glow)
+    const nebulaCount = 600;
+    const nebulaGeometry = new THREE.BufferGeometry();
+    const nebulaPositions = new Float32Array(nebulaCount * 3);
+    const nebulaColors = new Float32Array(nebulaCount * 3);
+
+    for (let i = 0; i < nebulaCount; i++) {
+      const radius = 1000 + Math.random() * 600;
+      const theta = (Math.random() - 0.5) * Math.PI * 1.8;
+      const phi = (Math.random() - 0.5) * Math.PI * 0.8;
+
+      nebulaPositions[i * 3] = radius * Math.cos(phi) * Math.sin(theta);
+      nebulaPositions[i * 3 + 1] = radius * Math.sin(phi);
+      nebulaPositions[i * 3 + 2] = -radius * Math.cos(phi) * Math.cos(theta);
+
+      // Deep interstellar nebula colors: Deep Indigo, Violet & Cyan Dust
+      const mix = Math.random();
+      if (mix > 0.6) {
+        nebulaColors[i * 3] = 0.15;
+        nebulaColors[i * 3 + 1] = 0.35;
+        nebulaColors[i * 3 + 2] = 0.65; // Cyan / Azure
+      } else if (mix > 0.3) {
+        nebulaColors[i * 3] = 0.35;
+        nebulaColors[i * 3 + 1] = 0.12;
+        nebulaColors[i * 3 + 2] = 0.55; // Cosmic Violet
+      } else {
+        nebulaColors[i * 3] = 0.08;
+        nebulaColors[i * 3 + 1] = 0.15;
+        nebulaColors[i * 3 + 2] = 0.35; // Deep Space Indigo
+      }
+    }
+    nebulaGeometry.setAttribute('position', new THREE.BufferAttribute(nebulaPositions, 3));
+    nebulaGeometry.setAttribute('color', new THREE.BufferAttribute(nebulaColors, 3));
+
+    const nebulaMaterial = new THREE.PointsMaterial({
+      size: 45,
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.18,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    });
+    const nebulaField = new THREE.Points(nebulaGeometry, nebulaMaterial);
+    scene.add(nebulaField);
+
+    // 5. Starfield (4,500 Stars with Realistic Scintillation)
     const starGeometry = new THREE.BufferGeometry();
-    const starCount = 4000;
+    const starCount = 4500;
     const starPositions = new Float32Array(starCount * 3);
     const starColors = new Float32Array(starCount * 3);
 
     for (let i = 0; i < starCount; i++) {
-      const radius = 950 + Math.random() * 850;
+      const radius = 950 + Math.random() * 900;
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(Math.random() * 2 - 1);
 
@@ -150,33 +193,33 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
       starPositions[i * 3 + 2] = radius * Math.cos(phi);
 
       const r = Math.random();
-      if (r > 0.82) {
-        starColors[i * 3] = 0.65;
-        starColors[i * 3 + 1] = 0.85;
-        starColors[i * 3 + 2] = 1.0; // Pale Blue
-      } else if (r > 0.65) {
-        starColors[i * 3] = 1.0;
+      if (r > 0.8) {
+        starColors[i * 3] = 0.7;
         starColors[i * 3 + 1] = 0.88;
-        starColors[i * 3 + 2] = 0.65; // Pale Gold
+        starColors[i * 3 + 2] = 1.0; // Pale Blue
+      } else if (r > 0.6) {
+        starColors[i * 3] = 1.0;
+        starColors[i * 3 + 1] = 0.85;
+        starColors[i * 3 + 2] = 0.6; // Pale Gold
       } else {
         starColors[i * 3] = 0.95;
         starColors[i * 3 + 1] = 0.95;
-        starColors[i * 3 + 2] = 0.98; // Diamond White
+        starColors[i * 3 + 2] = 0.98; // White
       }
     }
     starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
     starGeometry.setAttribute('color', new THREE.BufferAttribute(starColors, 3));
 
     const starMaterial = new THREE.PointsMaterial({
-      size: 1.8,
+      size: 2.0,
       vertexColors: true,
       transparent: true,
-      opacity: 0.85
+      opacity: 0.9
     });
     const starField = new THREE.Points(starGeometry, starMaterial);
     scene.add(starField);
 
-    // 5. Foreground Floating Cosmic Dust Motes ("A Mote of Dust")
+    // 6. Foreground Floating Cosmic Dust Motes ("A Mote of Dust")
     const dustCount = 800;
     const dustGeometry = new THREE.BufferGeometry();
     const dustPositions = new Float32Array(dustCount * 3);
@@ -187,30 +230,30 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
     }
     dustGeometry.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
     const dustMaterial = new THREE.PointsMaterial({
-      size: 2.2,
+      size: 2.4,
       color: 0xcde8ff,
       transparent: true,
-      opacity: 0.45,
+      opacity: 0.5,
       blending: THREE.AdditiveBlending
     });
     const dustField = new THREE.Points(dustGeometry, dustMaterial);
     scene.add(dustField);
     dustParticlesRef.current = dustField;
 
-    // 6. Lights: The Distant Blinding Sun
-    const sunLight = new THREE.DirectionalLight(0xfffaed, 2.9);
-    sunLight.position.set(450, 160, -750);
+    // 7. Blinding Distant Sun & God Ray Sunbeam
+    const sunLight = new THREE.DirectionalLight(0xfffaed, 3.2);
+    sunLight.position.set(480, 180, -800);
     scene.add(sunLight);
 
-    const ambientLight = new THREE.AmbientLight(0x101424, 0.55);
+    const ambientLight = new THREE.AmbientLight(0x0e1322, 0.65);
     scene.add(ambientLight);
 
-    // The iconic Voyager 1 diagonal Sunbeam streak
-    const sunbeamGeometry = new THREE.CylinderGeometry(1.2, 40, 1700, 32, 1, true);
+    // The iconic Voyager 1 diagonal Sunbeam streak with dual-layer glow
+    const sunbeamGeometry = new THREE.CylinderGeometry(1.2, 44, 1800, 32, 1, true);
     const sunbeamMaterial = new THREE.MeshBasicMaterial({
-      color: 0xfffae8,
+      color: 0xfffaea,
       transparent: true,
-      opacity: 0.045,
+      opacity: 0.05,
       side: THREE.DoubleSide,
       blending: THREE.AdditiveBlending,
       depthWrite: false
@@ -220,9 +263,8 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
     sunbeam.rotation.z = Math.PI / 4.25;
     sunbeam.rotation.x = 0.14;
     scene.add(sunbeam);
-    sunbeamMeshRef.current = sunbeam;
 
-    // 7. Earth Group (Globe, Clouds, Atmospheric Glow, POI Pins)
+    // 8. Earth Group
     const earthGroup = new THREE.Group();
     scene.add(earthGroup);
     earthGroupRef.current = earthGroup;
@@ -233,20 +275,20 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
     const specularTexture = textureLoader.load('/textures/earth-specular.webp');
     const normalTexture = textureLoader.load('/textures/earth-normal.webp');
 
-    // A. Earth Base Globe (Radius 10)
+    // A. Earth Base Globe (Radius 10) with High-Gloss Ocean Specular
     const earthGeometry = new THREE.SphereGeometry(10, 64, 64);
     const earthMaterial = new THREE.MeshStandardMaterial({
       map: dayTexture,
       roughnessMap: specularTexture,
-      roughness: 0.65,
-      metalness: 0.1,
+      roughness: 0.45, // Crisp ocean reflection
+      metalness: 0.15,
       normalMap: normalTexture,
-      normalScale: new THREE.Vector2(0.35, 0.35)
+      normalScale: new THREE.Vector2(0.45, 0.45)
     });
 
     earthMaterial.onBeforeCompile = (shader) => {
       shader.uniforms.nightTexture = { value: nightTexture };
-      shader.uniforms.sunDirection = { value: new THREE.Vector3(450, 160, -750).normalize() };
+      shader.uniforms.sunDirection = { value: new THREE.Vector3(480, 180, -800).normalize() };
 
       shader.fragmentShader = `
         uniform sampler2D nightTexture;
@@ -259,9 +301,10 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
         `
         #include <map_fragment>
         float NdotL = dot(vNormal, sunDirection);
-        float nightFactor = smoothstep(0.15, -0.35, NdotL);
+        float nightFactor = smoothstep(0.12, -0.38, NdotL);
         vec4 nightColor = texture2D(nightTexture, vMapUv);
-        diffuseColor.rgb += nightColor.rgb * nightFactor * 1.9;
+        // Golden glowing night city lights
+        diffuseColor.rgb += nightColor.rgb * nightFactor * 2.2;
         `
       );
     };
@@ -270,12 +313,12 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
     earthGroup.add(earthMesh);
     earthMeshRef.current = earthMesh;
 
-    // B. Clouds Layer (Radius 10.15)
-    const cloudsGeometry = new THREE.SphereGeometry(10.15, 64, 64);
+    // B. Clouds Layer with Depth (Radius 10.16)
+    const cloudsGeometry = new THREE.SphereGeometry(10.16, 64, 64);
     const cloudsMaterial = new THREE.MeshStandardMaterial({
       map: cloudsTexture,
       transparent: true,
-      opacity: 0.62,
+      opacity: 0.65,
       blending: THREE.NormalBlending,
       depthWrite: false
     });
@@ -283,9 +326,12 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
     earthGroup.add(cloudsMesh);
     cloudsMeshRef.current = cloudsMesh;
 
-    // C. Atmospheric Cyan Fresnel Glow
-    const atmosphereGeometry = new THREE.SphereGeometry(10.35, 64, 64);
+    // C. Rayleigh Atmospheric Scattering Glow (Sunset Amber Terminator + Cyan Rim)
+    const atmosphereGeometry = new THREE.SphereGeometry(10.42, 64, 64);
     const atmosphereMaterial = new THREE.ShaderMaterial({
+      uniforms: {
+        sunDirection: { value: new THREE.Vector3(480, 180, -800).normalize() }
+      },
       vertexShader: `
         varying vec3 vNormal;
         varying vec3 vPosition;
@@ -296,13 +342,21 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
         }
       `,
       fragmentShader: `
+        uniform vec3 sunDirection;
         varying vec3 vNormal;
         varying vec3 vPosition;
         void main() {
           vec3 viewDir = normalize(-vPosition);
-          float fresnel = pow(1.0 - max(0.0, dot(vNormal, viewDir)), 2.8);
-          vec3 glowColor = vec3(0.5, 0.82, 1.0); // Pale Cyan Glow
-          gl_FragColor = vec4(glowColor, fresnel * 0.95);
+          float fresnel = pow(1.0 - max(0.0, dot(vNormal, viewDir)), 2.6);
+          float NdotL = dot(vNormal, sunDirection);
+
+          // Rayleigh scattering: Cyan on daylight rim, glowing amber/rose on sunset terminator!
+          vec3 dayGlow = vec3(0.42, 0.78, 1.0);
+          vec3 sunsetGlow = vec3(1.0, 0.55, 0.25);
+          float sunsetFactor = smoothstep(-0.25, 0.25, NdotL) * (1.0 - smoothstep(0.2, 0.8, NdotL));
+
+          vec3 finalGlow = mix(dayGlow, sunsetGlow, sunsetFactor * 0.85);
+          gl_FragColor = vec4(finalGlow, fresnel * (0.4 + max(0.0, NdotL) * 0.6) * 1.1);
         }
       `,
       transparent: true,
@@ -313,28 +367,39 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
     const atmosphereMesh = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
     earthGroup.add(atmosphereMesh);
 
-    // D. POI Pins Group
+    // D. The Orbiting 3D Moon
+    const moonGroup = new THREE.Group();
+    earthGroup.add(moonGroup);
+    moonGroupRef.current = moonGroup;
+
+    const moonGeometry = new THREE.SphereGeometry(2.7, 32, 32);
+    const moonMaterial = new THREE.MeshStandardMaterial({
+      color: 0xcccccc,
+      roughness: 0.9,
+      metalness: 0.05
+    });
+    const moonMesh = new THREE.Mesh(moonGeometry, moonMaterial);
+    moonMesh.position.set(65, 12, -20);
+    moonGroup.add(moonMesh);
+
+    // E. POI Pins Group
     const poiPinsGroup = new THREE.Group();
-    earthMesh.add(poiPinsGroup); // Attached to rotating earth
+    earthMesh.add(poiPinsGroup);
     poiPinsGroupRef.current = poiPinsGroup;
 
     PLANET_POIS.forEach((poi) => {
       const pos = latLonToVector3(poi.lat, poi.lon, 10.25);
       const pinGeo = new THREE.SphereGeometry(0.18, 16, 16);
-      const pinMat = new THREE.MeshBasicMaterial({
-        color: 0x89cff0,
-        wireframe: false
-      });
+      const pinMat = new THREE.MeshBasicMaterial({ color: 0x89cff0 });
       const pin = new THREE.Mesh(pinGeo, pinMat);
       pin.position.copy(pos);
       pin.userData = { poi };
 
-      // Outer glowing beacon ring
       const ringGeo = new THREE.RingGeometry(0.25, 0.45, 24);
       const ringMat = new THREE.MeshBasicMaterial({
         color: 0x89cff0,
         transparent: true,
-        opacity: 0.6,
+        opacity: 0.65,
         side: THREE.DoubleSide
       });
       const ring = new THREE.Mesh(ringGeo, ringMat);
@@ -345,7 +410,7 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
       poiPinsGroup.add(pin);
     });
 
-    // 8. Voyager Golden Record Chamber (3D Model)
+    // 9. Voyager Golden Record Chamber (3D Model)
     const goldenRecordGroup = new THREE.Group();
     goldenRecordGroup.position.set(0, 0, -2000);
     scene.add(goldenRecordGroup);
@@ -356,16 +421,16 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
 
     const recordGeometry = new THREE.CylinderGeometry(11, 11, 0.35, 64);
     const recordMaterials = [
-      new THREE.MeshStandardMaterial({ color: 0xcca033, metalness: 0.9, roughness: 0.2 }),
-      new THREE.MeshStandardMaterial({ map: recordFrontTexture, metalness: 0.85, roughness: 0.25 }),
-      new THREE.MeshStandardMaterial({ map: recordCoverTexture, metalness: 0.85, roughness: 0.25 })
+      new THREE.MeshStandardMaterial({ color: 0xcca033, metalness: 0.95, roughness: 0.18 }),
+      new THREE.MeshStandardMaterial({ map: recordFrontTexture, metalness: 0.88, roughness: 0.22 }),
+      new THREE.MeshStandardMaterial({ map: recordCoverTexture, metalness: 0.88, roughness: 0.22 })
     ];
     const goldenRecordMesh = new THREE.Mesh(recordGeometry, recordMaterials);
     goldenRecordMesh.rotation.x = Math.PI / 2;
     goldenRecordGroup.add(goldenRecordMesh);
     goldenRecordMeshRef.current = goldenRecordMesh;
 
-    // 9. Resize handler
+    // 10. Resize handler
     const handleResize = () => {
       if (!container || !renderer || !camera) return;
       const w = container.clientWidth;
@@ -376,7 +441,7 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
     };
     window.addEventListener('resize', handleResize);
 
-    // 10. Pointer Tracking for Parallax & Orbit Drag
+    // 11. Pointer Tracking for Parallax & Orbit Drag
     const handlePointerMove = (e: PointerEvent) => {
       const w = window.innerWidth;
       const h = window.innerHeight;
@@ -410,7 +475,7 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
     window.addEventListener('pointerup', handlePointerUp);
     container.addEventListener('wheel', handleWheel, { passive: true });
 
-    // 11. Raycasting for POI pin clicks
+    // 12. Raycasting for POI pin clicks
     const raycaster = new THREE.Raycaster();
     const handleCanvasClick = (e: MouseEvent) => {
       if (!camera || !poiPinsGroupRef.current) return;
@@ -433,7 +498,7 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
     };
     container.addEventListener('click', handleCanvasClick);
 
-    // 12. Main Render Loop
+    // 13. Main Render Loop
     let animId: number;
     const clock = new THREE.Clock();
 
@@ -448,14 +513,18 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
       if (cloudsMeshRef.current) {
         cloudsMeshRef.current.rotation.y += delta * 0.038;
       }
+      if (moonGroupRef.current) {
+        moonGroupRef.current.rotation.y += delta * 0.008; // Moon orbits Earth
+      }
       if (goldenRecordMeshRef.current) {
         goldenRecordMeshRef.current.rotation.z += delta * 0.35;
       }
-      starField.rotation.y += delta * 0.002;
+      starField.rotation.y += delta * 0.0015;
+      nebulaField.rotation.y -= delta * 0.001;
 
       // Dust motes gentle drift
       if (dustParticlesRef.current) {
-        dustParticlesRef.current.rotation.y += delta * 0.008;
+        dustParticlesRef.current.rotation.y += delta * 0.006;
         dustParticlesRef.current.position.x = mousePointerRef.current.x * 12;
         dustParticlesRef.current.position.y = mousePointerRef.current.y * 8;
       }
@@ -489,7 +558,6 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
     if (viewMode === 'cinema') {
       goldenRecordGroup.position.set(0, 0, -2000);
 
-      // Parallax offset
       const px = mousePointerRef.current.x * 6;
       const py = mousePointerRef.current.y * 4;
 
