@@ -3,12 +3,65 @@ import * as THREE from 'three';
 
 export type ViewMode = 'cinema' | 'free' | 'record';
 
+export interface PlanetPOI {
+  id: string;
+  name: string;
+  jpName: string;
+  lat: number;
+  lon: number;
+  description: string;
+}
+
+export const PLANET_POIS: PlanetPOI[] = [
+  {
+    id: 'tokyo',
+    name: 'Metropolis of Lights',
+    jpName: '光のメガロポリス',
+    lat: 35.6762,
+    lon: 139.6503,
+    description: '38 million human lives flickering like distant fireflies on the dark side of the globe.'
+  },
+  {
+    id: 'himalayas',
+    name: 'The Roof of the World',
+    jpName: '世界の屋根 (ヒマラヤ)',
+    lat: 27.9881,
+    lon: 86.9250,
+    description: 'The highest frozen sanctuary on Earth, formed by continents crashing in slow motion across eons.'
+  },
+  {
+    id: 'sahara',
+    name: 'The Golden Expanse',
+    jpName: 'サハラ砂漠',
+    lat: 23.4162,
+    lon: 12.8628,
+    description: 'A sea of silence where the sun reigns supreme over ancient dried ocean beds.'
+  },
+  {
+    id: 'amazon',
+    name: 'The Living Canopy',
+    jpName: 'アマゾンの密林',
+    lat: -3.4653,
+    lon: -62.2159,
+    description: 'Generating one-fifth of the oxygen that every breathing creature on this pixel shares.'
+  },
+  {
+    id: 'mariana',
+    name: 'The Pacific Abyss',
+    jpName: 'マリアナ海溝',
+    lat: 11.3493,
+    lon: 142.1995,
+    description: 'Eleven kilometers of pitch-black saltwater, shielding primordial mysteries from the stars.'
+  }
+];
+
 interface CosmicCanvasProps {
-  currentTime: number; // 0 to 270.5 seconds
+  currentTime: number;
   duration: number;
   viewMode: ViewMode;
   isPlaying: boolean;
-  onEarthClick?: () => void;
+  selectedPoi: PlanetPOI | null;
+  onSelectPoi: (poi: PlanetPOI | null) => void;
 }
 
 export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
@@ -16,46 +69,57 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
   duration,
   viewMode,
   isPlaying,
-  onEarthClick
+  selectedPoi,
+  onSelectPoi
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  // Three.js instances refs
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
 
-  // Mesh refs
   const earthGroupRef = useRef<THREE.Group | null>(null);
   const earthMeshRef = useRef<THREE.Mesh | null>(null);
   const cloudsMeshRef = useRef<THREE.Mesh | null>(null);
-  const atmosphereMeshRef = useRef<THREE.Mesh | null>(null);
   const sunbeamMeshRef = useRef<THREE.Mesh | null>(null);
   const goldenRecordGroupRef = useRef<THREE.Group | null>(null);
   const goldenRecordMeshRef = useRef<THREE.Mesh | null>(null);
+  const dustParticlesRef = useRef<THREE.Points | null>(null);
+  const poiPinsGroupRef = useRef<THREE.Group | null>(null);
 
-  // Interaction / Orbit state for Free Orbit mode
+  // Mouse Parallax & Orbit state
+  const mousePointerRef = useRef({ x: 0, y: 0 });
   const isDraggingRef = useRef(false);
-  const previousMousePositionRef = useRef({ x: 0, y: 0 });
-  const orbitRotationRef = useRef({ x: 0.2, y: -0.5 });
-  const orbitDistanceRef = useRef(35);
+  const previousPointerRef = useRef({ x: 0, y: 0 });
+  const orbitRotationRef = useRef({ x: 0.25, y: -0.6 });
+  const orbitDistanceRef = useRef(32);
+
+  // Helper: lat/lon to 3D vector on sphere of radius R
+  const latLonToVector3 = (lat: number, lon: number, radius: number) => {
+    const phi = (90 - lat) * (Math.PI / 180);
+    const theta = (lon + 180) * (Math.PI / 180);
+    const x = -(radius * Math.sin(phi) * Math.cos(theta));
+    const z = radius * Math.sin(phi) * Math.sin(theta);
+    const y = radius * Math.cos(phi);
+    return new THREE.Vector3(x, y, z);
+  };
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
-    // 1. Scene
+    // 1. Scene & Deep Space Fog
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x05070c, 0.00035);
+    scene.fog = new THREE.FogExp2(0x020408, 0.00028);
     sceneRef.current = scene;
 
-    // 2. Camera (Narrow-angle lens simulation like Voyager 1 1500mm focal length)
+    // 2. Camera with Narrow Telephoto Lens
     const aspect = container.clientWidth / container.clientHeight;
-    const camera = new THREE.PerspectiveCamera(38, aspect, 0.1, 4000);
-    camera.position.set(0, 40, 1200); // Start far away at 40 AU
+    const camera = new THREE.PerspectiveCamera(36, aspect, 0.1, 4000);
+    camera.position.set(0, 40, 1200);
     cameraRef.current = camera;
 
-    // 3. Renderer with high-DPI support
+    // 3. Renderer with ACES Filmic Tone Mapping
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
       powerPreference: 'high-performance',
@@ -64,21 +128,20 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
     renderer.setSize(container.clientWidth, container.clientHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.15;
+    renderer.toneMappingExposure = 1.2;
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // 4. Texture Loader
     const textureLoader = new THREE.TextureLoader();
 
-    // 5. Starfield (3,500 procedural stars)
+    // 4. Starfield (4,000 multi-colored distant stars)
     const starGeometry = new THREE.BufferGeometry();
-    const starCount = 3500;
+    const starCount = 4000;
     const starPositions = new Float32Array(starCount * 3);
     const starColors = new Float32Array(starCount * 3);
 
     for (let i = 0; i < starCount; i++) {
-      const radius = 900 + Math.random() * 800;
+      const radius = 950 + Math.random() * 850;
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(Math.random() * 2 - 1);
 
@@ -86,23 +149,21 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
       starPositions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
       starPositions[i * 3 + 2] = radius * Math.cos(phi);
 
-      // Star colors: Ice Blue, Pale Gold, Diamond White
       const r = Math.random();
-      if (r > 0.8) {
+      if (r > 0.82) {
         starColors[i * 3] = 0.65;
-        starColors[i * 3 + 1] = 0.82;
+        starColors[i * 3 + 1] = 0.85;
         starColors[i * 3 + 2] = 1.0; // Pale Blue
-      } else if (r > 0.6) {
+      } else if (r > 0.65) {
         starColors[i * 3] = 1.0;
         starColors[i * 3 + 1] = 0.88;
         starColors[i * 3 + 2] = 0.65; // Pale Gold
       } else {
         starColors[i * 3] = 0.95;
         starColors[i * 3 + 1] = 0.95;
-        starColors[i * 3 + 2] = 0.98; // White
+        starColors[i * 3 + 2] = 0.98; // Diamond White
       }
     }
-
     starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
     starGeometry.setAttribute('color', new THREE.BufferAttribute(starColors, 3));
 
@@ -112,22 +173,42 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
       transparent: true,
       opacity: 0.85
     });
-
     const starField = new THREE.Points(starGeometry, starMaterial);
     scene.add(starField);
 
-    // 6. The Distant Sun & Sunbeam Light
-    const sunLight = new THREE.DirectionalLight(0xfffaed, 2.8);
-    sunLight.position.set(400, 180, -700);
+    // 5. Foreground Floating Cosmic Dust Motes ("A Mote of Dust")
+    const dustCount = 800;
+    const dustGeometry = new THREE.BufferGeometry();
+    const dustPositions = new Float32Array(dustCount * 3);
+    for (let i = 0; i < dustCount; i++) {
+      dustPositions[i * 3] = (Math.random() - 0.5) * 600;
+      dustPositions[i * 3 + 1] = (Math.random() - 0.5) * 400;
+      dustPositions[i * 3 + 2] = (Math.random() - 0.5) * 800;
+    }
+    dustGeometry.setAttribute('position', new THREE.BufferAttribute(dustPositions, 3));
+    const dustMaterial = new THREE.PointsMaterial({
+      size: 2.2,
+      color: 0xcde8ff,
+      transparent: true,
+      opacity: 0.45,
+      blending: THREE.AdditiveBlending
+    });
+    const dustField = new THREE.Points(dustGeometry, dustMaterial);
+    scene.add(dustField);
+    dustParticlesRef.current = dustField;
+
+    // 6. Lights: The Distant Blinding Sun
+    const sunLight = new THREE.DirectionalLight(0xfffaed, 2.9);
+    sunLight.position.set(450, 160, -750);
     scene.add(sunLight);
 
-    const ambientLight = new THREE.AmbientLight(0x161a28, 0.6);
+    const ambientLight = new THREE.AmbientLight(0x101424, 0.55);
     scene.add(ambientLight);
 
     // The iconic Voyager 1 diagonal Sunbeam streak
-    const sunbeamGeometry = new THREE.CylinderGeometry(1.5, 35, 1600, 32, 1, true);
+    const sunbeamGeometry = new THREE.CylinderGeometry(1.2, 40, 1700, 32, 1, true);
     const sunbeamMaterial = new THREE.MeshBasicMaterial({
-      color: 0xfbf6e2,
+      color: 0xfffae8,
       transparent: true,
       opacity: 0.045,
       side: THREE.DoubleSide,
@@ -135,25 +216,24 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
       depthWrite: false
     });
     const sunbeam = new THREE.Mesh(sunbeamGeometry, sunbeamMaterial);
-    sunbeam.position.set(20, 10, 0);
-    sunbeam.rotation.z = Math.PI / 4.2;
-    sunbeam.rotation.x = 0.15;
+    sunbeam.position.set(18, 8, 0);
+    sunbeam.rotation.z = Math.PI / 4.25;
+    sunbeam.rotation.x = 0.14;
     scene.add(sunbeam);
     sunbeamMeshRef.current = sunbeam;
 
-    // 7. Earth Group (Globe, Clouds, Atmosphere Rim)
+    // 7. Earth Group (Globe, Clouds, Atmospheric Glow, POI Pins)
     const earthGroup = new THREE.Group();
     scene.add(earthGroup);
     earthGroupRef.current = earthGroup;
 
-    // Textures
     const dayTexture = textureLoader.load('/textures/earth-day.webp');
     const nightTexture = textureLoader.load('/textures/earth-night.webp');
     const cloudsTexture = textureLoader.load('/textures/earth-clouds.webp');
     const specularTexture = textureLoader.load('/textures/earth-specular.webp');
     const normalTexture = textureLoader.load('/textures/earth-normal.webp');
 
-    // A. Earth Base Globe (10 units radius)
+    // A. Earth Base Globe (Radius 10)
     const earthGeometry = new THREE.SphereGeometry(10, 64, 64);
     const earthMaterial = new THREE.MeshStandardMaterial({
       map: dayTexture,
@@ -164,10 +244,9 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
       normalScale: new THREE.Vector2(0.35, 0.35)
     });
 
-    // Custom shader hook for glowing city lights on night side
     earthMaterial.onBeforeCompile = (shader) => {
       shader.uniforms.nightTexture = { value: nightTexture };
-      shader.uniforms.sunDirection = { value: new THREE.Vector3(400, 180, -700).normalize() };
+      shader.uniforms.sunDirection = { value: new THREE.Vector3(450, 160, -750).normalize() };
 
       shader.fragmentShader = `
         uniform sampler2D nightTexture;
@@ -179,12 +258,10 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
         '#include <map_fragment>',
         `
         #include <map_fragment>
-        // Calculate night side factor
         float NdotL = dot(vNormal, sunDirection);
         float nightFactor = smoothstep(0.15, -0.35, NdotL);
         vec4 nightColor = texture2D(nightTexture, vMapUv);
-        // Add golden night lights to unlit areas
-        diffuseColor.rgb += nightColor.rgb * nightFactor * 1.8;
+        diffuseColor.rgb += nightColor.rgb * nightFactor * 1.9;
         `
       );
     };
@@ -193,12 +270,12 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
     earthGroup.add(earthMesh);
     earthMeshRef.current = earthMesh;
 
-    // B. Clouds Layer (radius 10.15)
+    // B. Clouds Layer (Radius 10.15)
     const cloudsGeometry = new THREE.SphereGeometry(10.15, 64, 64);
     const cloudsMaterial = new THREE.MeshStandardMaterial({
       map: cloudsTexture,
       transparent: true,
-      opacity: 0.65,
+      opacity: 0.62,
       blending: THREE.NormalBlending,
       depthWrite: false
     });
@@ -206,7 +283,7 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
     earthGroup.add(cloudsMesh);
     cloudsMeshRef.current = cloudsMesh;
 
-    // C. Atmospheric Fresnel Rim Glow (Glowing Cyan Horizon)
+    // C. Atmospheric Cyan Fresnel Glow
     const atmosphereGeometry = new THREE.SphereGeometry(10.35, 64, 64);
     const atmosphereMaterial = new THREE.ShaderMaterial({
       vertexShader: `
@@ -224,7 +301,7 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
         void main() {
           vec3 viewDir = normalize(-vPosition);
           float fresnel = pow(1.0 - max(0.0, dot(vNormal, viewDir)), 2.8);
-          vec3 glowColor = vec3(0.45, 0.78, 1.0); // Pale Cyan Blue
+          vec3 glowColor = vec3(0.5, 0.82, 1.0); // Pale Cyan Glow
           gl_FragColor = vec4(glowColor, fresnel * 0.95);
         }
       `,
@@ -235,11 +312,42 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
     });
     const atmosphereMesh = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
     earthGroup.add(atmosphereMesh);
-    atmosphereMeshRef.current = atmosphereMesh;
 
-    // 8. Voyager Golden Record (3D Phonograph Disc)
+    // D. POI Pins Group
+    const poiPinsGroup = new THREE.Group();
+    earthMesh.add(poiPinsGroup); // Attached to rotating earth
+    poiPinsGroupRef.current = poiPinsGroup;
+
+    PLANET_POIS.forEach((poi) => {
+      const pos = latLonToVector3(poi.lat, poi.lon, 10.25);
+      const pinGeo = new THREE.SphereGeometry(0.18, 16, 16);
+      const pinMat = new THREE.MeshBasicMaterial({
+        color: 0x89cff0,
+        wireframe: false
+      });
+      const pin = new THREE.Mesh(pinGeo, pinMat);
+      pin.position.copy(pos);
+      pin.userData = { poi };
+
+      // Outer glowing beacon ring
+      const ringGeo = new THREE.RingGeometry(0.25, 0.45, 24);
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: 0x89cff0,
+        transparent: true,
+        opacity: 0.6,
+        side: THREE.DoubleSide
+      });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.position.copy(pos);
+      ring.lookAt(0, 0, 0);
+      pin.add(ring);
+
+      poiPinsGroup.add(pin);
+    });
+
+    // 8. Voyager Golden Record Chamber (3D Model)
     const goldenRecordGroup = new THREE.Group();
-    goldenRecordGroup.position.set(0, 0, -500); // Placed at distance, brought into focus in 'record' mode
+    goldenRecordGroup.position.set(0, 0, -2000);
     scene.add(goldenRecordGroup);
     goldenRecordGroupRef.current = goldenRecordGroup;
 
@@ -248,11 +356,10 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
 
     const recordGeometry = new THREE.CylinderGeometry(11, 11, 0.35, 64);
     const recordMaterials = [
-      new THREE.MeshStandardMaterial({ color: 0xcca033, metalness: 0.9, roughness: 0.2 }), // rim
-      new THREE.MeshStandardMaterial({ map: recordFrontTexture, metalness: 0.85, roughness: 0.25 }), // top
-      new THREE.MeshStandardMaterial({ map: recordCoverTexture, metalness: 0.85, roughness: 0.25 })  // bottom
+      new THREE.MeshStandardMaterial({ color: 0xcca033, metalness: 0.9, roughness: 0.2 }),
+      new THREE.MeshStandardMaterial({ map: recordFrontTexture, metalness: 0.85, roughness: 0.25 }),
+      new THREE.MeshStandardMaterial({ map: recordCoverTexture, metalness: 0.85, roughness: 0.25 })
     ];
-
     const goldenRecordMesh = new THREE.Mesh(recordGeometry, recordMaterials);
     goldenRecordMesh.rotation.x = Math.PI / 2;
     goldenRecordGroup.add(goldenRecordMesh);
@@ -269,21 +376,25 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
     };
     window.addEventListener('resize', handleResize);
 
-    // 10. Mouse/Touch interactions for Free Orbit
-    const handlePointerDown = (e: PointerEvent) => {
-      isDraggingRef.current = true;
-      previousMousePositionRef.current = { x: e.clientX, y: e.clientY };
+    // 10. Pointer Tracking for Parallax & Orbit Drag
+    const handlePointerMove = (e: PointerEvent) => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      mousePointerRef.current.x = (e.clientX / w) * 2 - 1;
+      mousePointerRef.current.y = -(e.clientY / h) * 2 + 1;
+
+      if (isDraggingRef.current) {
+        const deltaX = e.clientX - previousPointerRef.current.x;
+        const deltaY = e.clientY - previousPointerRef.current.y;
+        orbitRotationRef.current.y += deltaX * 0.005;
+        orbitRotationRef.current.x = Math.max(-1.4, Math.min(1.4, orbitRotationRef.current.x + deltaY * 0.005));
+        previousPointerRef.current = { x: e.clientX, y: e.clientY };
+      }
     };
 
-    const handlePointerMove = (e: PointerEvent) => {
-      if (!isDraggingRef.current) return;
-      const deltaX = e.clientX - previousMousePositionRef.current.x;
-      const deltaY = e.clientY - previousMousePositionRef.current.y;
-
-      orbitRotationRef.current.y += deltaX * 0.006;
-      orbitRotationRef.current.x = Math.max(-1.4, Math.min(1.4, orbitRotationRef.current.x + deltaY * 0.006));
-
-      previousMousePositionRef.current = { x: e.clientX, y: e.clientY };
+    const handlePointerDown = (e: PointerEvent) => {
+      isDraggingRef.current = true;
+      previousPointerRef.current = { x: e.clientX, y: e.clientY };
     };
 
     const handlePointerUp = () => {
@@ -291,33 +402,63 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
     };
 
     const handleWheel = (e: WheelEvent) => {
-      orbitDistanceRef.current = Math.max(14, Math.min(250, orbitDistanceRef.current + e.deltaY * 0.05));
+      orbitDistanceRef.current = Math.max(14, Math.min(200, orbitDistanceRef.current + e.deltaY * 0.04));
     };
 
-    container.addEventListener('pointerdown', handlePointerDown);
     window.addEventListener('pointermove', handlePointerMove);
+    container.addEventListener('pointerdown', handlePointerDown);
     window.addEventListener('pointerup', handlePointerUp);
     container.addEventListener('wheel', handleWheel, { passive: true });
 
-    // 11. Main Render Loop
+    // 11. Raycasting for POI pin clicks
+    const raycaster = new THREE.Raycaster();
+    const handleCanvasClick = (e: MouseEvent) => {
+      if (!camera || !poiPinsGroupRef.current) return;
+      const rect = container.getBoundingClientRect();
+      const mouse = new THREE.Vector2(
+        ((e.clientX - rect.left) / rect.width) * 2 - 1,
+        -((e.clientY - rect.top) / rect.height) * 2 + 1
+      );
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(poiPinsGroupRef.current.children, true);
+      if (intersects.length > 0) {
+        let obj: THREE.Object3D | null = intersects[0].object;
+        while (obj && !obj.userData?.poi) {
+          obj = obj.parent;
+        }
+        if (obj?.userData?.poi) {
+          onSelectPoi(obj.userData.poi);
+        }
+      }
+    };
+    container.addEventListener('click', handleCanvasClick);
+
+    // 12. Main Render Loop
     let animId: number;
-    let clock = new THREE.Clock();
+    const clock = new THREE.Clock();
 
     const animate = () => {
       animId = requestAnimationFrame(animate);
       const delta = clock.getDelta();
 
-      // Earth & Clouds slow rotational motion
+      // Earth & Clouds Rotation
       if (earthMeshRef.current) {
-        earthMeshRef.current.rotation.y += delta * 0.03;
+        earthMeshRef.current.rotation.y += delta * 0.025;
       }
       if (cloudsMeshRef.current) {
-        cloudsMeshRef.current.rotation.y += delta * 0.042; // clouds swirl slightly faster
+        cloudsMeshRef.current.rotation.y += delta * 0.038;
       }
       if (goldenRecordMeshRef.current) {
-        goldenRecordMeshRef.current.rotation.z += delta * 0.4; // 33 1/3 RPM spin
+        goldenRecordMeshRef.current.rotation.z += delta * 0.35;
       }
-      starField.rotation.y += delta * 0.003;
+      starField.rotation.y += delta * 0.002;
+
+      // Dust motes gentle drift
+      if (dustParticlesRef.current) {
+        dustParticlesRef.current.rotation.y += delta * 0.008;
+        dustParticlesRef.current.position.x = mousePointerRef.current.x * 12;
+        dustParticlesRef.current.position.y = mousePointerRef.current.y * 8;
+      }
 
       renderer.render(scene, camera);
     };
@@ -327,10 +468,11 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
     return () => {
       cancelAnimationFrame(animId);
       window.removeEventListener('resize', handleResize);
-      container.removeEventListener('pointerdown', handlePointerDown);
       window.removeEventListener('pointermove', handlePointerMove);
+      container.removeEventListener('pointerdown', handlePointerDown);
       window.removeEventListener('pointerup', handlePointerUp);
       container.removeEventListener('wheel', handleWheel);
+      container.removeEventListener('click', handleCanvasClick);
       if (renderer.domElement && renderer.domElement.parentNode) {
         renderer.domElement.parentNode.removeChild(renderer.domElement);
       }
@@ -338,64 +480,56 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
     };
   }, []);
 
-  // Update Camera & Positions on currentTime or viewMode change
+  // Camera Interpolation & Modes
   useEffect(() => {
     const camera = cameraRef.current;
-    const earthGroup = earthGroupRef.current;
     const goldenRecordGroup = goldenRecordGroupRef.current;
-    if (!camera || !earthGroup || !goldenRecordGroup) return;
+    if (!camera || !goldenRecordGroup) return;
 
     if (viewMode === 'cinema') {
-      // Hide Golden Record in cinema view
       goldenRecordGroup.position.set(0, 0, -2000);
 
-      // CINEMATIC JOURNEY INTERPOLATION (0s to 270.5s):
-      // 0s to 32s: Distance 40 AU (z = 1100 -> 950). Earth is a tiny pixel inside the sunbeam.
-      // 33s to 98s: Hyperspace zoom across the solar system (z = 950 -> 350).
-      // 99s to 172s: Majestic Earth orbit approach (z = 350 -> 90).
-      // 173s to 236s: Night side rotation, revealing golden city lights (camera orbits to z = 50, x = 40).
-      // 237s to 270s: Low-orbit cinematic sweep (z = 28, y = 8).
+      // Parallax offset
+      const px = mousePointerRef.current.x * 6;
+      const py = mousePointerRef.current.y * 4;
 
       const t = Math.min(270, currentTime);
-      let targetX = 0;
-      let targetY = 0;
+      let targetX = px;
+      let targetY = py;
       let targetZ = 1100;
 
       if (t < 32) {
         const progress = t / 32;
         targetZ = 1100 - progress * 150;
-        targetY = 25 - progress * 10;
-        targetX = 15 - progress * 5;
+        targetY = 25 - progress * 10 + py;
+        targetX = 15 - progress * 5 + px;
       } else if (t < 98) {
         const progress = (t - 32) / (98 - 32);
-        targetZ = 950 - progress * 650; // 950 -> 300
-        targetY = 15 - progress * 5;
-        targetX = 10 - progress * 10;
+        targetZ = 950 - progress * 650;
+        targetY = 15 - progress * 5 + py;
+        targetX = 10 - progress * 10 + px;
       } else if (t < 172) {
         const progress = (t - 98) / (172 - 98);
-        targetZ = 300 - progress * 210; // 300 -> 90
-        targetY = 10 + Math.sin(progress * Math.PI) * 15;
-        targetX = Math.sin(progress * Math.PI * 0.8) * 30;
+        targetZ = 300 - progress * 210;
+        targetY = 10 + Math.sin(progress * Math.PI) * 12 + py;
+        targetX = Math.sin(progress * Math.PI * 0.8) * 28 + px;
       } else if (t < 236) {
         const progress = (t - 172) / (236 - 172);
-        // Swing to night side of Earth
-        targetZ = 90 - progress * 48; // 90 -> 42
-        targetX = 30 + progress * 25; // 30 -> 55
-        targetY = 10 - progress * 4;
+        targetZ = 90 - progress * 48;
+        targetX = 30 + progress * 25 + px;
+        targetY = 10 - progress * 4 + py;
       } else {
         const progress = (t - 236) / (270 - 236);
-        targetZ = 42 - progress * 16; // 42 -> 26 (Very close orbit)
-        targetX = 55 - progress * 40;
-        targetY = 6 + Math.sin(progress * Math.PI) * 8;
+        targetZ = 42 - progress * 16;
+        targetX = 55 - progress * 40 + px;
+        targetY = 6 + Math.sin(progress * Math.PI) * 6 + py;
       }
 
-      // Smooth camera interpolation
       camera.position.x += (targetX - camera.position.x) * 0.08;
       camera.position.y += (targetY - camera.position.y) * 0.08;
       camera.position.z += (targetZ - camera.position.z) * 0.08;
       camera.lookAt(0, 0, 0);
     } else if (viewMode === 'free') {
-      // Free orbit mode: camera is controlled by touch/mouse orbitRotation & orbitDistance
       goldenRecordGroup.position.set(0, 0, -2000);
       const rot = orbitRotationRef.current;
       const dist = orbitDistanceRef.current;
@@ -409,9 +543,8 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
       camera.position.z += (targetZ - camera.position.z) * 0.1;
       camera.lookAt(0, 0, 0);
     } else if (viewMode === 'record') {
-      // Golden Record Chamber view
       goldenRecordGroup.position.set(0, 0, 0);
-      camera.position.set(0, 5, 34);
+      camera.position.set(0, 4, 32);
       camera.lookAt(0, 0, 0);
     }
   }, [currentTime, viewMode]);

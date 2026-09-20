@@ -1,20 +1,26 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { CosmicCanvas, ViewMode } from './components/CosmicCanvas';
+import { CosmicCanvas, ViewMode, PlanetPOI } from './components/CosmicCanvas';
 import { SpaceTelemetryHUD } from './components/SpaceTelemetryHUD';
 import { GoldenRecordVault } from './components/GoldenRecordVault';
+import { EnterVoidOverlay } from './components/EnterVoidOverlay';
+import { PoiCard } from './components/PoiCard';
 import { SUBTITLES, SubtitleCue } from './data/subtitles';
 
 export const App: React.FC = () => {
+  // Autoplay & Entrance State
+  const [hasEntered, setHasEntered] = useState<boolean>(false);
+
   // Playback & Timing state
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<number>(0);
-  const [duration, setDuration] = useState<number>(270.8); // 3:30 + tail
+  const [duration, setDuration] = useState<number>(270.8);
   const [volume, setVolume] = useState<number>(0.85);
   const [isMuted, setIsMuted] = useState<boolean>(false);
 
-  // View & Language state
+  // View, POI & Language state
   const [viewMode, setViewMode] = useState<ViewMode>('cinema');
   const [language, setLanguage] = useState<'id' | 'en' | 'ja'>('id');
+  const [selectedPoi, setSelectedPoi] = useState<PlanetPOI | null>(null);
   const [isVaultOpen, setIsVaultOpen] = useState<boolean>(false);
 
   // Audio elements refs
@@ -24,6 +30,18 @@ export const App: React.FC = () => {
   // Current Subtitle Cue
   const currentCue: SubtitleCue | null =
     SUBTITLES.find((c) => currentTime >= c.start && currentTime <= c.end) || null;
+
+  // Handle Entrance & Autoplay
+  const handleEnterVoid = () => {
+    setHasEntered(true);
+    const vocal = vocalAudioRef.current;
+    const music = musicAudioRef.current;
+    if (vocal && music) {
+      vocal.play().catch(() => {});
+      music.play().catch(() => {});
+      setIsPlaying(true);
+    }
+  };
 
   // Audio Playback & Auto-ducking
   const togglePlay = () => {
@@ -57,7 +75,7 @@ export const App: React.FC = () => {
     setIsMuted(false);
     if (vocalAudioRef.current && musicAudioRef.current) {
       vocalAudioRef.current.volume = val;
-      musicAudioRef.current.volume = val * 0.45; // music baseline
+      musicAudioRef.current.volume = val * 0.45;
     }
   };
 
@@ -70,7 +88,7 @@ export const App: React.FC = () => {
     }
   };
 
-  // Sync current time from audio
+  // Sync current time from audio & dynamic ducking
   useEffect(() => {
     const vocal = vocalAudioRef.current;
     const music = musicAudioRef.current;
@@ -80,8 +98,8 @@ export const App: React.FC = () => {
       setCurrentTime(vocal.currentTime);
 
       // Dynamic Audio Ducking:
-      // If Carl Sagan is currently speaking (currentCue active), drop music volume to 25%.
-      // If there is a pause, swell music to 60%!
+      // When Carl Sagan speaks, drop music to 28% volume.
+      // During pauses, swell music to 65%!
       const isSpeaking = SUBTITLES.some(
         (c) => vocal.currentTime >= c.start && vocal.currentTime <= c.end
       );
@@ -117,7 +135,11 @@ export const App: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'Space' || e.key === 'k' || e.key === 'K') {
         e.preventDefault();
-        togglePlay();
+        if (!hasEntered) {
+          handleEnterVoid();
+        } else {
+          togglePlay();
+        }
       } else if (e.key === 'm' || e.key === 'M') {
         handleToggleMute();
       } else if (e.key === '1') {
@@ -130,15 +152,16 @@ export const App: React.FC = () => {
         setIsVaultOpen((prev) => !prev);
       } else if (e.key === 'Escape') {
         setIsVaultOpen(false);
+        setSelectedPoi(null);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isPlaying, isMuted]);
+  }, [hasEntered, isPlaying, isMuted]);
 
   return (
-    <div className="relative w-screen h-[100dvh] overflow-hidden bg-[#05070c] text-white select-none">
+    <div className="relative w-screen h-[100dvh] overflow-hidden bg-[#020408] text-white select-none">
       {/* Background Audio Elements */}
       <audio
         ref={vocalAudioRef}
@@ -158,6 +181,8 @@ export const App: React.FC = () => {
         duration={duration}
         viewMode={viewMode}
         isPlaying={isPlaying}
+        selectedPoi={selectedPoi}
+        onSelectPoi={setSelectedPoi}
       />
 
       {/* Space Telemetry HUD Overlay */}
@@ -179,9 +204,22 @@ export const App: React.FC = () => {
         onOpenVault={() => setIsVaultOpen(true)}
       />
 
+      {/* Selected Earth POI Card */}
+      {selectedPoi && (
+        <PoiCard
+          poi={selectedPoi}
+          onClose={() => setSelectedPoi(null)}
+        />
+      )}
+
       {/* NASA Golden Record Vault Modal */}
       {isVaultOpen && (
         <GoldenRecordVault onClose={() => setIsVaultOpen(false)} />
+      )}
+
+      {/* Cinematic Mysterious Entrance Overlay (Autoplay Gate) */}
+      {!hasEntered && (
+        <EnterVoidOverlay onEnter={handleEnterVoid} />
       )}
     </div>
   );
