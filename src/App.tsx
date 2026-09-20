@@ -2,10 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { CosmicCanvas, ViewMode, PlanetPOI, CelestialBodyTarget } from './components/CosmicCanvas';
 import { SpaceTelemetryHUD } from './components/SpaceTelemetryHUD';
 import { CelestialTargetPins } from './components/CelestialTargetPins';
+import { CelestialInspectorCard } from './components/CelestialInspectorCard';
 import { GoldenRecordVault } from './components/GoldenRecordVault';
 import { EnterVoidOverlay } from './components/EnterVoidOverlay';
 import { PoiCard } from './components/PoiCard';
 import { SUBTITLES, SubtitleCue } from './data/subtitles';
+import { CELESTIAL_DATABASE } from './data/celestialData';
 
 export const App: React.FC = () => {
   // Autoplay & Entrance State
@@ -23,6 +25,7 @@ export const App: React.FC = () => {
   const [language, setLanguage] = useState<'id' | 'en' | 'ja'>('id');
   const [selectedPoi, setSelectedPoi] = useState<PlanetPOI | null>(null);
   const [celestialTargets, setCelestialTargets] = useState<CelestialBodyTarget[]>([]);
+  const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
   const [isVaultOpen, setIsVaultOpen] = useState<boolean>(false);
 
   // Audio elements refs
@@ -152,12 +155,15 @@ export const App: React.FC = () => {
       } else if (e.key === 'Escape') {
         setIsVaultOpen(false);
         setSelectedPoi(null);
+        setSelectedTargetId(null);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [hasEntered, isPlaying, isMuted]);
+
+  const selectedTargetInfo = selectedTargetId ? CELESTIAL_DATABASE[selectedTargetId] : null;
 
   return (
     <div className="relative w-screen h-[100dvh] overflow-hidden bg-[#020408] text-white select-none">
@@ -181,12 +187,22 @@ export const App: React.FC = () => {
         viewMode={viewMode}
         isPlaying={isPlaying}
         selectedPoi={selectedPoi}
-        onSelectPoi={setSelectedPoi}
+        onSelectPoi={(poi) => {
+          setSelectedPoi(poi);
+          setSelectedTargetId(null);
+        }}
         onUpdateTargets={setCelestialTargets}
       />
 
       {/* Subtle Interactive Celestial Target Reticles (Earth, Moon, Sun, Mars, Jupiter) */}
-      <CelestialTargetPins targets={celestialTargets} />
+      <CelestialTargetPins
+        targets={celestialTargets}
+        selectedTargetId={selectedTargetId}
+        onSelectTarget={(id) => {
+          setSelectedTargetId(id);
+          setSelectedPoi(null);
+        }}
+      />
 
       {/* Space Telemetry HUD Overlay */}
       <SpaceTelemetryHUD
@@ -206,6 +222,18 @@ export const App: React.FC = () => {
         onSelectLanguage={setLanguage}
         onOpenVault={() => setIsVaultOpen(true)}
       />
+
+      {/* Celestial Body Inspector Card */}
+      {selectedTargetInfo && (
+        <CelestialInspectorCard
+          info={selectedTargetInfo}
+          onClose={() => setSelectedTargetId(null)}
+          onSelectPoi={(poi) => {
+            setSelectedPoi(poi);
+            setSelectedTargetId(null);
+          }}
+        />
+      )}
 
       {/* Selected Earth POI Card */}
       {selectedPoi && (
