@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { CelestialBodyTarget } from './CosmicCanvas';
-import { Sparkles, Activity, Radio } from 'lucide-react';
 
 interface CelestialTargetPinsProps {
   targets: CelestialBodyTarget[];
@@ -15,37 +14,16 @@ export const CelestialTargetPins: React.FC<CelestialTargetPinsProps> = ({
 }) => {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
-  // Live Jittering Telemetry Numbers (Simulates Real-time Radio Ranging & Doppler Shift)
-  const [jitterOffset, setJitterOffset] = useState<number>(382);
-  const [earthStatusIndex, setEarthStatusIndex] = useState<number>(0);
+  // Smooth real-time distance countdown (matches Voyager 1 speed: 17 km per second)
+  const [liveDistanceKm, setLiveDistanceKm] = useState<number>(6054558190);
 
-  const earthStatuses = [
-    '0.12 PIXEL',
-    'PALE BLUE DOT',
-    'OUR HOME',
-    'LIFE: 100%',
-    'ORIGIN'
-  ];
-
-  // Fast 80ms interval for realistic astrometric telemetry jitter
   useEffect(() => {
-    const jitterInterval = setInterval(() => {
-      // Random fluctuation around ±45 meters/sub-kilometer
-      setJitterOffset((prev) => {
-        const delta = Math.floor((Math.random() - 0.5) * 60);
-        return Math.max(100, Math.min(999, prev + delta));
-      });
-    }, 80);
+    // Smoothly increment distance by 17 km every second with micro-ticks
+    const timer = setInterval(() => {
+      setLiveDistanceKm((prev) => prev + 17);
+    }, 1000);
 
-    // Cycle Earth status badge every 2.5 seconds
-    const statusInterval = setInterval(() => {
-      setEarthStatusIndex((prev) => (prev + 1) % earthStatuses.length);
-    }, 2500);
-
-    return () => {
-      clearInterval(jitterInterval);
-      clearInterval(statusInterval);
-    };
+    return () => clearInterval(timer);
   }, []);
 
   return (
@@ -64,112 +42,97 @@ export const CelestialTargetPins: React.FC<CelestialTargetPinsProps> = ({
             }}
             className="absolute -top-3 -left-3 pointer-events-auto transition-transform duration-75"
           >
-            {/* The Reticle Dot / Beacon */}
+            {/* The Reticle & Delicate Hairline Connector */}
             <div
               onMouseEnter={() => setHoveredId(target.id)}
               onMouseLeave={() => setHoveredId(null)}
               onClick={() => onSelectTarget(target.id)}
-              className="relative w-8 h-8 flex items-center justify-center cursor-pointer group"
+              className="relative flex items-center cursor-pointer group"
             >
-              {/* Earth Radar Ping Waves (Calling out into deep space) */}
-              {isEarth && (
-                <>
-                  <span className="absolute -inset-1 rounded-full border border-[#89cff0]/60 animate-ping pointer-events-none duration-1000" />
-                  <span className="absolute -inset-2.5 rounded-full border border-cyan-400/20 animate-pulse pointer-events-none" />
-                </>
-              )}
+              {/* Central Optical Dot */}
+              <div className="relative w-6 h-6 flex items-center justify-center">
+                {/* Subtle Breathing Halo for Earth */}
+                {isEarth && (
+                  <span className="absolute inset-0 rounded-full border border-[#89cff0]/40 animate-ping duration-[3000ms] pointer-events-none" />
+                )}
 
-              {/* Core Beacon Dot */}
-              <span
-                className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                  isEarth || isSelected
-                    ? 'bg-[#89cff0] shadow-[0_0_12px_#89cff0] scale-110'
-                    : isHovered
-                    ? 'bg-amber-400 shadow-[0_0_10px_#f59e0b]'
-                    : 'bg-white/40 group-hover:bg-white'
-                }`}
-              />
+                {/* Core Dot */}
+                <span
+                  className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+                    isEarth
+                      ? 'bg-[#89cff0] shadow-[0_0_8px_#89cff0]'
+                      : isHovered
+                      ? 'bg-amber-300 shadow-[0_0_8px_#fcd34d]'
+                      : 'bg-white/50 group-hover:bg-white'
+                  }`}
+                />
 
-              {/* Rotating Dashed Reticle Ring */}
-              <span
-                className={`absolute inset-0 rounded-full border border-dashed transition-all duration-500 ${
-                  isEarth
-                    ? 'border-[#89cff0] scale-125 opacity-90 animate-[spin_8s_linear_infinite]'
-                    : isSelected
-                    ? 'border-[#89cff0] scale-125 opacity-100 rotate-90 ring-1 ring-cyan-400/40'
-                    : isHovered
-                    ? 'border-[#89cff0] scale-125 opacity-100 rotate-45'
-                    : 'border-white/20 scale-90 opacity-40 group-hover:opacity-75'
-                }`}
-              />
-            </div>
+                {/* Ultra-fine Dashed Outer Ring */}
+                <span
+                  className={`absolute inset-0.5 rounded-full border border-dashed transition-all duration-500 ${
+                    isEarth
+                      ? 'border-[#89cff0]/60 scale-110 opacity-80'
+                      : isSelected
+                      ? 'border-cyan-400 scale-125 opacity-100'
+                      : isHovered
+                      ? 'border-white/60 scale-110 opacity-90'
+                      : 'border-white/20 scale-95 opacity-30 group-hover:opacity-60'
+                  }`}
+                />
+              </div>
 
-            {/* Interactive Dynamic Tooltip & Live Telemetry Readout */}
-            <div
-              onClick={() => onSelectTarget(target.id)}
-              onMouseEnter={() => setHoveredId(target.id)}
-              onMouseLeave={() => setHoveredId(null)}
-              className={`absolute left-9 top-1/2 -translate-y-1/2 whitespace-nowrap transition-all duration-300 cursor-pointer pointer-events-auto ${
-                isHovered || isSelected || isEarth
-                  ? 'opacity-100 translate-x-0'
-                  : 'opacity-0 -translate-x-1 pointer-events-none'
-              }`}
-            >
+              {/* Elegant Hairline Lead Line */}
               <div
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl shadow-2xl backdrop-blur-md border transition-all ${
+                className={`h-px transition-all duration-300 ${
                   isEarth
-                    ? 'bg-[#060c18]/90 border-cyan-400/50 text-white ring-1 ring-cyan-400/30 hover:border-cyan-300 hover:shadow-cyan-500/20'
-                    : isSelected
-                    ? 'bg-[#0b1426]/90 border-cyan-400 text-white ring-1 ring-cyan-400/50'
+                    ? 'w-6 bg-gradient-to-r from-[#89cff0]/60 to-[#89cff0]/20'
                     : isHovered
-                    ? 'bg-[#070e1c]/90 border-cyan-400/60 text-white'
-                    : 'bg-[#050914]/75 border-white/15 text-slate-300'
+                    ? 'w-5 bg-white/40'
+                    : 'w-3 bg-white/15'
+                }`}
+              />
+
+              {/* Minimalist Editorial Label (Zero Bulky Boxes, Pure Poetry) */}
+              <div
+                className={`pl-1.5 transition-all duration-300 ${
+                  isHovered || isSelected
+                    ? 'opacity-100 translate-x-0'
+                    : isEarth
+                    ? 'opacity-85 translate-x-0'
+                    : 'opacity-0 -translate-x-1 group-hover:opacity-75 group-hover:translate-x-0'
                 }`}
               >
-                {/* Body Name with animated holographic shimmer */}
                 {isEarth ? (
-                  <div className="flex items-center gap-1.5">
-                    <span className="relative flex h-1.5 w-1.5">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-cyan-500" />
-                    </span>
+                  <div className="flex flex-col">
+                    {/* Poetic Serif Title */}
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="font-serif italic text-sm text-white drop-shadow-[0_1px_8px_rgba(0,0,0,0.9)] tracking-wide">
+                        Earth
+                      </span>
+                      <span className="font-mono text-[9px] text-[#89cff0]/90 tracking-wider">
+                        · 0.12 px
+                      </span>
+                    </div>
 
-                    <span className="font-display font-bold text-xs tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-white via-[#89cff0] to-white animate-pulse drop-shadow-[0_0_8px_rgba(137,207,240,0.8)]">
-                      EARTH
-                    </span>
-
-                    {/* Smooth Cycling Badge */}
-                    <span className="font-mono text-[8px] px-1.5 py-0.2 rounded bg-cyan-950/80 border border-cyan-700/60 text-cyan-300 tracking-wider transition-all duration-300">
-                      {earthStatuses[earthStatusIndex]}
-                    </span>
+                    {/* Smooth Live Distance Countdown */}
+                    <div className="font-mono text-[8px] text-slate-400 tracking-wider flex items-center gap-1 drop-shadow-[0_1px_6px_rgba(0,0,0,0.9)]">
+                      <span className="text-[#89cff0]/70 tabular-nums">
+                        {liveDistanceKm.toLocaleString()} km
+                      </span>
+                      <span className="text-[7px] text-slate-500 uppercase">
+                        (~40.47 AU)
+                      </span>
+                    </div>
                   </div>
                 ) : (
-                  <span className="font-mono text-[9px] font-bold tracking-wider">
-                    {target.name}
-                  </span>
-                )}
-
-                {/* DYNAMIC JITTERING NUMBERS / TELEMETRY */}
-                {isEarth ? (
-                  <div className="flex items-center gap-1 border-l border-white/15 pl-2 font-mono text-[9px] text-[#89cff0]">
-                    <Activity className="w-2.5 h-2.5 text-cyan-400 animate-pulse" />
-                    <span>6,054,558,</span>
-                    <span className="font-bold text-white tabular-nums tracking-widest bg-cyan-950/40 px-0.5 rounded">
-                      {jitterOffset}
+                  <div className="flex items-baseline gap-1.5 drop-shadow-[0_1px_8px_rgba(0,0,0,0.9)]">
+                    <span className="font-serif italic text-xs text-slate-200">
+                      {target.name.toLowerCase()}
                     </span>
-                    <span className="text-[8px] text-slate-400">km</span>
+                    <span className="font-mono text-[8px] text-[#89cff0]/80">
+                      {target.distance}
+                    </span>
                   </div>
-                ) : (
-                  <span className="font-mono text-[8px] text-[#89cff0]">
-                    {target.distance}
-                  </span>
-                )}
-
-                {/* Hover Action Hint */}
-                {isHovered && (
-                  <span className="font-mono text-[8px] text-cyan-300 border-l border-white/10 pl-1.5 flex items-center gap-1">
-                    <Sparkles className="w-2 h-2" /> Inspect
-                  </span>
                 )}
               </div>
             </div>
