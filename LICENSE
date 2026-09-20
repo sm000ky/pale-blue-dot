@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 sm000ky & Zero Two
+Copyright (c) 2026 Bagus Lindu Pamungkas
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +19,43 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+SCOPE — READ THIS BEFORE REUSING ANYTHING FROM THIS REPOSITORY
+
+The licence above covers the SOURCE CODE ONLY: the contents of `src/`, the build
+configuration, and the documentation.
+
+It does NOT cover the contents of `public/`. Those files are third-party works
+included here for a specific non-commercial, educational portfolio project, and this
+repository has no authority to relicense them:
+
+  public/audio/sagan-vocals.mp3
+      Carl Sagan reading "Pale Blue Dot" (1994).
+      © 1994 Carl Sagan · © 2006 Democritus Properties, LLC.
+      This repository holds NO documented licence or permission for this recording.
+
+  public/audio/aurora.mp3
+      "Aurora" by Scott Buckley — CC BY 4.0 — www.scottbuckley.com.au
+
+  public/audio/earth-bretbernhoft.mp3
+      "Warbling 28" — Sound Effect by Bret Bernhoft from Pixabay.
+      Pixabay Content License.
+
+  public/textures/
+      Solar Textures by Solar System Scope (INOVE) — CC BY 4.0.
+
+  public/archive/*.webp
+      NASA/JPL-Caltech. Used in accordance with NASA/JPL media usage guidelines.
+
+  public/archive/record/*.webp
+      40 frames from the Voyager Golden Record image gallery. NASA states that these
+      images are copyright protected. They are reproduced here with the credit NASA
+      prints for each one, WITHOUT any documented licence or permission. One frame
+      carries no readable credit at all.
+
+If you fork this repository, the code is yours under the MIT terms. The media is not.
+Obtain your own permissions, or remove `public/` and supply your own assets.
+
+For attribution, rights, or removal requests, please contact the repository owner.

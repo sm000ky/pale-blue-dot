@@ -1,0 +1,206 @@
+{
+ "model": "whisper-base.en",
+ "count": 40,
+ "words": [
+  {
+   "text": "From this distant vantage point, the earth might not seem of any particular interest.",
+   "start": 0,
+   "end": 6
+  },
+  {
+   "text": "But for us, it's different.",
+   "start": 7.2,
+   "end": 9.52
+  },
+  {
+   "text": "Consider again that, that, that's here, that's home, that's us.",
+   "start": 10.24,
+   "end": 16.8
+  },
+  {
+   "text": "On it, everyone you love, everyone you know, everyone you ever heard of,",
+   "start": 17.52,
+   "end": 24
+  },
+  {
+   "text": "every human being whoever was,",
+   "start": 24,
+   "end": 26
+  },
+  {
+   "text": "lived out their lives. The aggregate or joy and suffering, thousands of",
+   "start": 26,
+   "end": 33.68
+  },
+  {
+   "text": "confident religions, ideologies and economic doctrines, every hunter and",
+   "start": 33.68,
+   "end": 38.64
+  },
+  {
+   "text": "forager, every hero and coward, every creator and destroyer of civilization,",
+   "start": 38.64,
+   "end": 44.56
+  },
+  {
+   "text": "Every king and peasant, every young couple in love, every creator and destroyer of civilization, every king and peasant,",
+   "start": 44.56,
+   "end": 46.48
+  },
+  {
+   "text": "every young couple in love, every mother and father, hopeful child, inventor and explorer,",
+   "start": 47.2,
+   "end": 54.24
+  },
+  {
+   "text": "every teacher of morals, every corrupt politician, every superstar, every supreme leader, every saint",
+   "start": 54.88,
+   "end": 63.6
+  },
+  {
+   "text": "and sinner in the history of our species, live there on",
+   "start": 63.6,
+   "end": 68.22
+  },
+  {
+   "text": "the mode of dust suspended in a sunbeam.",
+   "start": 68.22,
+   "end": 73.48
+  },
+  {
+   "text": "The earth is a very small stage in a fast, cosmic arena.",
+   "start": 73.48,
+   "end": 81.8
+  },
+  {
+   "text": "Think of the rivers of blood spilled by all those generals and emperors, so that",
+   "start": 81.8,
+   "end": 88.7
+  },
+  {
+   "text": "in glory and triumph they could become the momentary masters of a fraction of a dot.",
+   "start": 88.7,
+   "end": 97.34
+  },
+  {
+   "text": "Think of the endless cruelties visited by the inhabitants of one corner of this pixel,",
+   "start": 97.34,
+   "end": 103.42
+  },
+  {
+   "text": "on the scarcely distinguishable inhabitants",
+   "start": 103.42,
+   "end": 106.52
+  },
+  {
+   "text": "of some other corner.",
+   "start": 106.52,
+   "end": 108.38
+  },
+  {
+   "text": "How frequent their misunderstandings, how eager they are to kill one another, how fervent",
+   "start": 108.38,
+   "end": 115.02
+  },
+  {
+   "text": "their hatreds, our posturens, our imagined self-importance, the delusion that we have",
+   "start": 115.02,
+   "end": 124.04
+  },
+  {
+   "text": "some privileged position in the universe,",
+   "start": 124.04,
+   "end": 126.72
+  },
+  {
+   "text": "are challenged by this point of pale light.",
+   "start": 126.72,
+   "end": 132.12
+  },
+  {
+   "text": "Our planet is a lonely speck in the great, enveloping cosmic dark.",
+   "start": 132.12,
+   "end": 140.32
+  },
+  {
+   "text": "In our obscurity, in all this vastness, there is no hint that help will come from elsewhere",
+   "start": 140.32,
+   "end": 149.04
+  },
+  {
+   "text": "to save us from ourselves.",
+   "start": 149.04,
+   "end": 152.32
+  },
+  {
+   "text": "The earth is the only world known so far to harbor life.",
+   "start": 152.32,
+   "end": 156.68
+  },
+  {
+   "text": "There is nowhere else, at least in the near future, to which our species could migrate.",
+   "start": 156.68,
+   "end": 162.84
+  },
+  {
+   "text": "Visit?",
+   "start": 162.84,
+   "end": 163.84
+  },
+  {
+   "text": "Yes.",
+   "start": 163.84,
+   "end": 164.84
+  },
+  {
+   "text": "Settle. Not yet. Like it or not.. which our species could migrate. Visit? Yes.",
+   "start": 164.84,
+   "end": 165.3
+  },
+  {
+   "text": "Settle.",
+   "start": 165.3,
+   "end": 166.9
+  },
+  {
+   "text": "Not yet.",
+   "start": 166.9,
+   "end": 168.8
+  },
+  {
+   "text": "Like it or not.",
+   "start": 168.8,
+   "end": 170.16
+  },
+  {
+   "text": "For the moment, the Earth is where we make our stand.",
+   "start": 170.16,
+   "end": 175.08
+  },
+  {
+   "text": "It has been said that astronomy is a humbling and character-building experience.",
+   "start": 175.08,
+   "end": 180.92
+  },
+  {
+   "text": "There is perhaps no better demonstration of the folly of human conceits than this distant",
+   "start": 180.92,
+   "end": 186.44
+  },
+  {
+   "text": "image of our tiny world.",
+   "start": 186.44,
+   "end": 189.84
+  },
+  {
+   "text": "To me, it underscores our responsibility to deal more kindly with one another, and",
+   "start": 189.84,
+   "end": 196.28
+  },
+  {
+   "text": "to preserve and cherish the pale blue dot, the only home we've ever known.",
+   "start": 196.28,
+   "end": null
+  }
+ ]
+}

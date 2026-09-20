@@ -1,0 +1,438 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   PALE BLUE DOT — observatory instrument panel
+   Voyager 1 · 14 February 1990 · 6.06 billion km
+
+   The whole piece is one locked screen: a full-bleed canvas with instrument
+   chrome pinned to the edges. Two voices only — a warm literary serif for
+   Sagan, a cold technical mono for telemetry.
+   --------------------------------------------------------------------------- */
+
+:root {
+  color-scheme: dark;
+
+  /* The two families the piece is set in. next/font writes the -latin variables on
+     <html>; these compose the names everything else uses, so that :lang(ja) below can
+     append a Japanese stack without the Latin face falling out of the list. */
+  --font-serif: var(--font-serif-latin), serif;
+  --font-mono: var(--font-mono-latin), monospace;
+
+  /* Surfaces */
+  --void: #05070c;
+  --void-lift: #0a0e16;
+
+  /* Type — three steps, every one of them cleared for 10px text on --void:
+     15.89:1 / 7.67:1 / 4.93:1. The faint step is the floor, not a licence to
+     go quieter; nothing in the piece is allowed below it. */
+  --paper: #e8e4dc;
+  --paper-dim: #9aa0ab;
+  --paper-faint: #767e8c;
+
+  /* Accents — the dot itself, and the sunbeam it was caught in */
+  --pale-blue: #a3c1e0;
+  --sunbeam: #c8a678;
+
+  /* Structure */
+  --rule: rgba(232, 228, 220, 0.1);
+
+  /* Mono scale — the instrument speaks in exactly two registers, and the
+     register decides all three axes at once:
+
+       stencil  10px / 500 / 0.18em / uppercase — names, stamps, controls
+       readout  11px / 400 / 0.04em             — numbers and their units
+
+     Wide tracking is what makes small uppercase legible; readouts are already
+     open because the face is monospaced, so they get the tighter step. Held as
+     variables so the handful of places that need a colour these utilities do
+     not carry still spend the same two sizes and the same two trackings. */
+  /* Both sizes are fluid, and the shape of the fluidity is the point.
+
+     The piece was drawn at 1440x900 and the instrument type is deliberately
+     delicate, but delicate is not the same as unreadable: on a 27-inch desktop
+     at 2560 wide, a 10px stencil is a third of the angular size it has on a
+     laptop, and the things set in it are not decoration — they are source
+     markers, credits and copyright lines.
+
+     So each step is a line through two points rather than a guess:
+
+       stencil   10px floor (mobile, unchanged) -> 11px at 1440 -> 13px at 2560
+       readout   11px floor (mobile, unchanged) -> 12px at 1440 -> 14px at 2560
+
+     Below ~1400px the floor wins, so every phone and small laptop renders
+     exactly what it rendered before. Above ~2560 the cap holds, so a 4K or
+     ultrawide monitor gains space rather than type. The 1440 baseline moves by
+     one pixel, which is the smallest change that answers the complaint. */
+  --mono-stencil-size: clamp(10px, 0.179vw + 8.43px, 13px);
+  --mono-stencil-track: 0.18em;
+  --mono-readout-size: clamp(11px, 0.179vw + 9.43px, 14px);
+  --mono-readout-track: 0.04em;
+
+  /* The stencil setting again, for the labels that change language: the rail, the
+     play gate, the credits panel, the language screen. Identical to the stencil
+     track in Latin and narrowed for Japanese further down, which is the whole
+     reason it is a separate variable — see the :lang(ja) block. */
+  --chrome-track: 0.18em;
+  --chrome-track-wide: 0.3em;
+
+  /* Every prose measure in the piece is written in `ch` and multiplied by this.
+     `ch` is the width of "0", which in the Latin serif is about half an em — so
+     `30ch` is the ~60-character line the copy was set to. See the :lang(ja) block
+     for why that number cannot survive a script whose glyphs are a full em wide. */
+  --measure-scale: 1;
+
+  /* The display line — chapter openings and the closing card — is set at a fixed
+     size in a fixed column, so a script with wider glyphs needs its own step. */
+  --display-scale: 1;
+
+  /* The one-off micro steps, held here for the same reason the two above are:
+     so a 27-inch desktop can be fixed in one place rather than in twenty. Same
+     construction — a floor that keeps mobile identical, a slope calibrated at
+     1440, a cap that stops growth at desktop scale. */
+  --micro-2xs: clamp(9px, 0.089vw + 8.71px, 11px);
+  --micro-xs: clamp(9px, 0.134vw + 8.57px, 12px);
+  --micro-sm: clamp(10px, 0.179vw + 8.43px, 13px);
+  --micro-md: clamp(11px, 0.179vw + 9.43px, 14px);
+  --micro-base: clamp(12px, 0.134vw + 10.57px, 14px);
+  --micro-lg: clamp(13px, 0.179vw + 11.43px, 16px);
+}
+
+/* --- CJK ------------------------------------------------------------------ */
+
+/* Newsreader and JetBrains Mono are loaded with the latin and latin-ext subsets
+   and contain no kana, hanzi or hangul at all, so CJK in either of them renders as
+   tofu. The fix is NOT to replace the two typefaces the whole piece is built on,
+   and it is not to ship a 10MB CJK webfont either: it is to hand each script, and
+   only that script, to faces the reader already has.
+
+   A brush-serif first for the serif voice — Mincho, Songti, Myeongjo — because the
+   piece is set in a literary serif and a gothic face would change what it sounds
+   like; the gothic stack follows as the fallback for machines without one, and the
+   generic `serif` / `sans-serif` closes each list because on Windows those already
+   resolve to a CJK face.
+
+   The Latin family stays FIRST in every list. That is what keeps a Latin identifier
+   inside a CJK sentence — Voyager 1, NASA, PIA17049 — in the piece's own type
+   instead of the system face, and it was confirmed by rendering: with the stack the
+   identifiers keep their Newsreader letterforms, with a bare `serif` they do not.
+
+   Each block is scoped with :lang(), which the root and the stage both set, so
+   nothing here can reach a locale it was not meant for. */
+:lang(ja) {
+  --font-serif:
+    var(--font-serif-latin), "Hiragino Mincho ProN", "Yu Mincho", YuMincho,
+    "Noto Serif JP", "Source Han Serif JP", serif;
+  --font-mono:
+    var(--font-mono-latin), "Hiragino Sans", "Yu Gothic", YuGothic, "Noto Sans JP",
+    Meiryo, sans-serif;
+}
+
+:lang(zh-CN) {
+  --font-serif:
+    var(--font-serif-latin), "Songti SC", STSong, "Source Han Serif SC",
+    "Noto Serif CJK SC", "Noto Serif SC", SimSun, serif;
+  --font-mono:
+    var(--font-mono-latin), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+    "Noto Sans SC", sans-serif;
+}
+
+:lang(ko) {
+  --font-serif:
+    var(--font-serif-latin), AppleMyungjo, "Nanum Myeongjo", "Source Han Serif K",
+    "Noto Serif KR", Batang, serif;
+  --font-mono:
+    var(--font-mono-latin), "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR",
+    "Nanum Gothic", sans-serif;
+}
+
+/* CJK sets tighter than Latin at the same measure and needs more leading to stay
+   readable: kana and hanzi have no ascender/descender rhythm to lean on, and hangul
+   syllable blocks are dense enough that lines close up on each other.
+
+   PROSE ONLY. This rule used to reach headings as well — it named `.font-serif`,
+   which every h2 in the sequence carries — and 1.75 is body leading, far too loose
+   for a display line. The measurement harness caught what that cost: the Japanese
+   `sent-images` beat, a seven-line list set as a heading, came to 545px inside 546px
+   of stage. One pixel. Headings get their own, much smaller CJK bump below; the
+   Latin values they are lifted from are 1.06 and 1.18. */
+:lang(ja) p,
+:lang(zh-CN) p,
+:lang(ko) p {
+  line-height: 1.75;
+}
+
+:lang(ja) h2,
+:lang(zh-CN) h2,
+:lang(ko) h2 {
+  line-height: 1.35;
+}
+
+/* Letter-spacing and measure are the two settings CJK cannot inherit from the Latin
+   design, and each script needs a different amount of correction.
+
+   TRACKING. The stencil track is 0.18em, which is right for a five-letter Latin
+   label and wrong for kana and hanzi: at that setting 画像アーカイブ抜粋 reads as
+   eight separated characters rather than one word, and neither Japanese nor Chinese
+   has an inter-word space to tell the reader otherwise. Korean does — 띄어쓰기 is
+   part of the orthography — so its syllable blocks only need the Latin tracking
+   taken off, not replaced with a tight one.
+
+   Only `--chrome-track` moves, and `--mono-stencil-track` deliberately does not.
+   They are the same 0.18em in Latin and they mark two different things. The stencil
+   is the instrument: DISTANCE TO EARTH, T+ 00:00, 40.5 AU, and the beat eyebrows —
+   `~6 BILLION KM`, `01 / THE PHOTOGRAPH` — which stay in English in every language
+   by design and would look wrong narrowed. `--chrome-track` is on the labels that
+   actually change language. Narrowing the stencil globally would have fixed four
+   translated labels by degrading twenty English ones.
+
+   MEASURE. `ch` is the width of "0" — about half an em in the Latin serif — so
+   `max-w-[30ch]` is the ~60-character line the copy was set to. A CJK glyph is a
+   full em, so that same rule holds about fifteen of them and the column came out at
+   half the width it was designed for. `--measure-scale` multiplies every measure
+   back up; the stage's own `min(32rem, 74vw)` is the real limit and stays in
+   charge, so this can only stop the column under-filling, never widen the layout. */
+:lang(ja) {
+  --chrome-track: 0.05em;
+  --chrome-track-wide: 0.1em;
+  --measure-scale: 1.9;
+
+  /* At 390px the column is 289px and the display line is 33.6px. Nine kanji is
+     302px, so 一枚だけだとしたら wrapped and left a single character alone on a
+     third line — not a kinsoku violation, but not something anyone would set on
+     purpose. A tenth off the display size buys the 13px it was short by, and at
+     1440 it turns a heading that only just fitted into one that comfortably does.
+     Body type is untouched: nothing there was close to the edge. */
+  --display-scale: 0.9;
+}
+
+/* Chinese behaves as Japanese does here — full-em glyphs, no inter-word space —
+   so it takes the same three corrections. */
+:lang(zh-CN) {
+  --chrome-track: 0.05em;
+  --chrome-track-wide: 0.1em;
+  --measure-scale: 1.9;
+  --display-scale: 0.9;
+}
+
+/* Korean is the one CJK script with word spaces, and it changes two of the three
+   numbers. Tracking comes off rather than being replaced by a tight value: hangul
+   blocks are already separated by 띄어쓰기, and adding a gap between syllables of
+   the same word is the exact defect the brief for this pass warned about. The
+   measure needs less correction than Chinese for the same reason — the spaces give
+   the line real break opportunities, so it fills a narrower column honestly — and
+   the display size needs almost none, because Korean headings break at word
+   boundaries instead of stranding a single glyph. */
+:lang(ko) {
+  --chrome-track: 0.02em;
+  --chrome-track-wide: 0.06em;
+  --measure-scale: 1.7;
+  --display-scale: 0.94;
+}
+
+/* Latin inside Japanese gets its Latin setting back.
+   Custom properties inherit, so once the root is lang="ja" everything under it —
+   including the language screen's own rows, which name six Latin languages — is
+   typeset for kana. `:lang(es)` does not undo `:lang(ja)`; only a declaration does.
+   This is that declaration, and it is why every row of the language manifest looks
+   the same whichever language the reader arrives in. */
+:lang(en),
+:lang(id),
+:lang(es),
+:lang(fr),
+:lang(de),
+:lang(pt) {
+  --chrome-track: 0.18em;
+  --chrome-track-wide: 0.3em;
+  --measure-scale: 1;
+  --display-scale: 1;
+}
+
+/* The palette already clears AA for small text. For anyone who asks the OS for
+   more, the faint step collapses into --paper-dim (7.67:1) and the rules that
+   separate the readouts come forward with it. */
+@media (prefers-contrast: more) {
+  :root {
+    --paper-faint: #9aa0ab;
+    --rule: rgba(232, 228, 220, 0.22);
+  }
+}
+
+/* `inline` keeps the theme values as literal var() references, so the font
+   variables injected on <html> by next/font resolve at use site. */
+@theme inline {
+  --color-void: var(--void);
+  --color-void-lift: var(--void-lift);
+  --color-paper: var(--paper);
+  --color-paper-dim: var(--paper-dim);
+  --color-paper-faint: var(--paper-faint);
+  --color-pale-blue: var(--pale-blue);
+  --color-sunbeam: var(--sunbeam);
+  --color-rule: var(--rule);
+
+  --font-serif: var(--font-serif);
+  --font-mono: var(--font-mono);
+
+  /* The two trackings as first-class utilities (`tracking-stencil`,
+     `tracking-readout`), so mono type set outside the hud-* utilities has a
+     named step to land on instead of another one-off arbitrary value. */
+  --tracking-stencil: var(--mono-stencil-track);
+  --tracking-readout: var(--mono-readout-track);
+}
+
+/* --- Document ------------------------------------------------------------ */
+
+html,
+body {
+  height: 100%;
+  background: var(--void);
+  color: var(--paper);
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/* Small viewport height: stable on mobile because nothing ever scrolls, so
+   the browser chrome never collapses and never resizes the canvas mid-scene. */
+@supports (height: 100svh) {
+  html,
+  body {
+    height: 100svh;
+  }
+}
+
+body {
+  font-family: var(--font-serif);
+  /* Newsreader carries an optical-size axis — let display sizes use it. */
+  font-optical-sizing: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* --- HUD ----------------------------------------------------------------- */
+
+/* Three utilities, two registers. Metrics come from the scale above; the only
+   thing each utility decides for itself is which of the three type steps it
+   speaks at. Pick by brightness, never by stacking a text-* colour on top —
+   these are plain classes, so which one wins would come down to sheet order. */
+
+/* Tertiary stencil: what an instrument prints next to a readout, and what the
+   chrome controls are set in. Quietest step that still clears AA. */
+@utility hud-label {
+  font-family: var(--font-mono);
+  font-size: var(--mono-stencil-size);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: var(--mono-stencil-track);
+  text-transform: uppercase;
+  color: var(--paper-faint);
+}
+
+/* Worn alongside `hud-label` by the handful of stencils that carry TRANSLATED text
+   rather than an instrument marking — the archive heading, the credit card titles,
+   the "Translation" label over Carter, the closing card's eyebrow, the attribution
+   sheet's row labels, the loading readout.
+
+   Identical to the stencil track in every Latin language, so nothing moves for six
+   of the seven; under :lang(ja) it narrows and the kana close up. Written as a plain
+   class rather than an `@utility` on purpose: unlayered rules outrank Tailwind's
+   utility layer, so this beats `hud-label`'s own letter-spacing regardless of which
+   order the two end up in. */
+.chrome-cap {
+  letter-spacing: var(--chrome-track);
+}
+
+/* Same stencil, promoted: panel headings and any label that names the thing it
+   sits above rather than annotating it. */
+@utility hud-key {
+  font-family: var(--font-mono);
+  font-size: var(--mono-stencil-size);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: var(--mono-stencil-track);
+  text-transform: uppercase;
+  color: var(--paper-dim);
+}
+
+/* The readout itself — the second register, one step brighter than its label. */
+@utility hud-value {
+  font-family: var(--font-mono);
+  font-size: var(--mono-readout-size);
+  font-weight: 400;
+  line-height: 1.2;
+  letter-spacing: var(--mono-readout-track);
+  color: var(--paper-dim);
+}
+
+/* --- Captions ------------------------------------------------------------ */
+
+/* Sagan's lines cross the terminator: for most of the arrival they sit on void,
+   then the Earth fills the frame and they land on cloud (#dfe4ea) and ice
+   (#f2f4f6), where --paper on its own measures 1.01:1 — invisible. Two shadows
+   rather than one: a tight drop that keeps the letterforms cut, and a wide halo
+   that pushes the local background back toward void. No backdrop-blur — a
+   filtered plate over the globe would read as a card and break the illusion
+   that the words are simply in the sky. */
+@utility caption-legible {
+  text-shadow:
+    0 1px 2px rgba(5, 7, 12, 0.95),
+    0 0 24px rgba(5, 7, 12, 0.85);
+}
+
+/* --- Interaction --------------------------------------------------------- */
+
+::selection {
+  background: var(--pale-blue);
+  color: var(--void);
+}
+
+:focus-visible {
+  outline: 1px solid var(--pale-blue);
+  outline-offset: 3px;
+}
+
+/* --- Archive index ------------------------------------------------------- */
+
+/* Forty names read off NASA's pages, arriving one after another rather than as a
+   block. The stagger is the point: a list that appears all at once is a table, and
+   a table is not what forty deliberate choices about what a species is should look
+   like. 45ms between rows, set inline per row; the delay is the only thing that
+   differs between them.
+
+   `data-cascade` is written by the scroll handler at the moment the layer becomes
+   visible — not when React mounted it, which happens most of a beat earlier — so
+   the rows run in as the beat crossfades in rather than behind a transparent layer
+   nobody is looking at. It is set back to 'off' when the beat leaves, so scrolling
+   back up plays it again instead of finding the list already assembled.
+
+   The reduced-motion clamp below catches these two declarations like every other
+   transition, which is the correct answer: the names still arrive, all at once. */
+.archive-row {
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 560ms ease-out,
+    transform 560ms ease-out;
+}
+
+[data-cascade='on'] .archive-row {
+  opacity: 1;
+  transform: none;
+}
+
+/* --- Motion -------------------------------------------------------------- */
+
+/* Kills decorative CSS motion. GSAP and the WebGL loop are not CSS — client
+   components must check matchMedia('(prefers-reduced-motion: reduce)') too. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    /* Delay, not only duration. The archive index staggers forty names with an
+       inline `transition-delay` of up to 450ms; clamping the duration alone leaves
+       the stagger fully intact, so the list still arrives one line at a time — the
+       exact effect the preference asks us not to run. */
+    animation-delay: 0ms !important;
+    transition-delay: 0ms !important;
+  }
+}
