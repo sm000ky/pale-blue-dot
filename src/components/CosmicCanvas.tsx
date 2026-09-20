@@ -1,7 +1,17 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 
 export type ViewMode = 'cinema' | 'free' | 'record';
+
+export interface CelestialBodyTarget {
+  id: string;
+  name: string;
+  jpName: string;
+  tagline: string;
+  distance: string;
+  screenPos: { x: number; y: number; visible: boolean };
+  worldPos: THREE.Vector3;
+}
 
 export interface PlanetPOI {
   id: string;
@@ -62,6 +72,7 @@ interface CosmicCanvasProps {
   isPlaying: boolean;
   selectedPoi: PlanetPOI | null;
   onSelectPoi: (poi: PlanetPOI | null) => void;
+  onUpdateTargets?: (targets: CelestialBodyTarget[]) => void;
 }
 
 export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
@@ -70,7 +81,8 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
   viewMode,
   isPlaying,
   selectedPoi,
-  onSelectPoi
+  onSelectPoi,
+  onUpdateTargets
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
@@ -81,25 +93,27 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
   const earthGroupRef = useRef<THREE.Group | null>(null);
   const earthMeshRef = useRef<THREE.Mesh | null>(null);
   const cloudsMeshRef = useRef<THREE.Mesh | null>(null);
-  const moonGroupRef = useRef<THREE.Group | null>(null);
+  const moonMeshRef = useRef<THREE.Mesh | null>(null);
+  const sunMeshRef = useRef<THREE.Mesh | null>(null);
+  const marsMeshRef = useRef<THREE.Mesh | null>(null);
+  const jupiterMeshRef = useRef<THREE.Mesh | null>(null);
+
   const goldenRecordGroupRef = useRef<THREE.Group | null>(null);
   const goldenRecordMeshRef = useRef<THREE.Mesh | null>(null);
   const dustParticlesRef = useRef<THREE.Points | null>(null);
   const poiPinsGroupRef = useRef<THREE.Group | null>(null);
 
-  // Smooth frame-by-frame camera animation state (Eliminates all 4Hz audio stutter!)
+  // Smooth frame-by-frame camera animation state
   const targetCameraPosRef = useRef(new THREE.Vector3(0, 40, 1100));
   const currentCameraPosRef = useRef(new THREE.Vector3(0, 40, 1100));
   const targetLookAtRef = useRef(new THREE.Vector3(0, 0, 0));
   const currentLookAtRef = useRef(new THREE.Vector3(0, 0, 0));
 
-  // Current time ref for smooth requestAnimationFrame access
   const currentTimeRef = useRef(0);
   const viewModeRef = useRef<ViewMode>('cinema');
   currentTimeRef.current = currentTime;
   viewModeRef.current = viewMode;
 
-  // Mouse Parallax & Orbit state
   const mousePointerRef = useRef({ x: 0, y: 0 });
   const smoothedPointerRef = useRef({ x: 0, y: 0 });
   const isDraggingRef = useRef(false);
@@ -125,13 +139,13 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
     scene.fog = new THREE.FogExp2(0x020408, 0.00018);
     sceneRef.current = scene;
 
-    // 2. Camera: Voyager 1 Narrow-Angle Telescope Optical Simulation (0.42° FOV at start)
+    // 2. Camera with Narrow Telephoto Lens
     const aspect = container.clientWidth / container.clientHeight;
-    const camera = new THREE.PerspectiveCamera(34, aspect, 0.1, 4000);
+    const camera = new THREE.PerspectiveCamera(34, aspect, 0.1, 5000);
     camera.position.set(0, 40, 1100);
     cameraRef.current = camera;
 
-    // 3. WebGL Renderer: Capped at pixelRatio 1.6 for rock-solid 60-120 FPS on all devices
+    // 3. WebGL Renderer: Capped at pixelRatio 1.6 for rock-solid 60-120 FPS
     const renderer = new THREE.WebGLRenderer({
       antialias: true,
       powerPreference: 'high-performance',
@@ -148,7 +162,7 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
 
     const textureLoader = new THREE.TextureLoader();
 
-    // 4. Optimized Cosmic Starfield (3,000 high-performance stars, zero fillrate lag)
+    // 4. Optimized Cosmic Starfield (3,000 stars)
     const starGeometry = new THREE.BufferGeometry();
     const starCount = 3000;
     const starPositions = new Float32Array(starCount * 3);
@@ -167,15 +181,15 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
       if (r > 0.8) {
         starColors[i * 3] = 0.7;
         starColors[i * 3 + 1] = 0.88;
-        starColors[i * 3 + 2] = 1.0; // Pale Blue
+        starColors[i * 3 + 2] = 1.0;
       } else if (r > 0.6) {
         starColors[i * 3] = 1.0;
         starColors[i * 3 + 1] = 0.85;
-        starColors[i * 3 + 2] = 0.6; // Pale Gold
+        starColors[i * 3 + 2] = 0.6;
       } else {
         starColors[i * 3] = 0.95;
         starColors[i * 3 + 1] = 0.95;
-        starColors[i * 3 + 2] = 0.98; // White
+        starColors[i * 3 + 2] = 0.98;
       }
     }
     starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
@@ -190,7 +204,7 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
     const starField = new THREE.Points(starGeometry, starMaterial);
     scene.add(starField);
 
-    // 5. Floating Cosmic Dust Motes (400 particles, zero lag)
+    // 5. Floating Cosmic Dust Motes (400 particles)
     const dustCount = 400;
     const dustGeometry = new THREE.BufferGeometry();
     const dustPositions = new Float32Array(dustCount * 3);
@@ -211,13 +225,21 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
     scene.add(dustField);
     dustParticlesRef.current = dustField;
 
-    // 6. NASA JPL Astronomical Sun Position (32° above ecliptic plane)
+    // 6. Blinding Distant Sun
     const sunLight = new THREE.DirectionalLight(0xfffaed, 3.2);
     sunLight.position.set(480, 180, -800);
     scene.add(sunLight);
 
     const ambientLight = new THREE.AmbientLight(0x0e1322, 0.65);
     scene.add(ambientLight);
+
+    // Sun Sphere
+    const sunGeo = new THREE.SphereGeometry(18, 32, 32);
+    const sunMat = new THREE.MeshBasicMaterial({ color: 0xfffaea });
+    const sunMesh = new THREE.Mesh(sunGeo, sunMat);
+    sunMesh.position.set(480, 180, -800);
+    scene.add(sunMesh);
+    sunMeshRef.current = sunMesh;
 
     // The iconic 32° Voyager 1 Sunbeam Optical Flare
     const sunbeamGeometry = new THREE.CylinderGeometry(1.2, 40, 1800, 32, 1, true);
@@ -246,7 +268,7 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
     const specularTexture = textureLoader.load('/textures/earth-specular.webp');
     const normalTexture = textureLoader.load('/textures/earth-normal.webp');
 
-    // Earth Base Globe (Radius 10) with Ocean Specular Glint
+    // Earth Base Globe (Radius 10)
     const earthGeometry = new THREE.SphereGeometry(10, 64, 64);
     const earthMaterial = new THREE.MeshStandardMaterial({
       map: dayTexture,
@@ -296,7 +318,7 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
     earthGroup.add(cloudsMesh);
     cloudsMeshRef.current = cloudsMesh;
 
-    // Rayleigh Atmospheric Scattering (Cyan daylight rim + golden sunset terminator)
+    // Rayleigh Atmospheric Scattering
     const atmosphereGeometry = new THREE.SphereGeometry(10.42, 64, 64);
     const atmosphereMaterial = new THREE.ShaderMaterial({
       uniforms: {
@@ -336,20 +358,33 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
     const atmosphereMesh = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
     earthGroup.add(atmosphereMesh);
 
-    // 3D Moon Orbit
-    const moonGroup = new THREE.Group();
-    earthGroup.add(moonGroup);
-    moonGroupRef.current = moonGroup;
-
+    // 3D Moon Mesh
     const moonGeometry = new THREE.SphereGeometry(2.7, 32, 32);
     const moonMaterial = new THREE.MeshStandardMaterial({
-      color: 0xcccccc,
-      roughness: 0.9,
+      color: 0xd0d4dc,
+      roughness: 0.85,
       metalness: 0.05
     });
     const moonMesh = new THREE.Mesh(moonGeometry, moonMaterial);
     moonMesh.position.set(65, 12, -20);
-    moonGroup.add(moonMesh);
+    scene.add(moonMesh);
+    moonMeshRef.current = moonMesh;
+
+    // Distant Celestial Neighbor 1: Mars
+    const marsGeo = new THREE.SphereGeometry(3.5, 32, 32);
+    const marsMat = new THREE.MeshStandardMaterial({ color: 0xdf6544, roughness: 0.8 });
+    const marsMesh = new THREE.Mesh(marsGeo, marsMat);
+    marsMesh.position.set(-280, 80, -350);
+    scene.add(marsMesh);
+    marsMeshRef.current = marsMesh;
+
+    // Distant Celestial Neighbor 2: Jupiter
+    const jupiterGeo = new THREE.SphereGeometry(12, 32, 32);
+    const jupiterMat = new THREE.MeshStandardMaterial({ color: 0xd8b58a, roughness: 0.7 });
+    const jupiterMesh = new THREE.Mesh(jupiterGeo, jupiterMat);
+    jupiterMesh.position.set(340, -110, -520);
+    scene.add(jupiterMesh);
+    jupiterMeshRef.current = jupiterMesh;
 
     // POI Pins
     const poiPinsGroup = new THREE.Group();
@@ -467,42 +502,42 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
     };
     container.addEventListener('click', handleCanvasClick);
 
-    // 12. Main 60-120 FPS Buttery Smooth Render Loop
+    // 12. Main 60-120 FPS Buttery Smooth Render Loop & Screen Projections
     let animId: number;
     const clock = new THREE.Clock();
+    let frameCount = 0;
 
     const animate = () => {
       animId = requestAnimationFrame(animate);
       const delta = Math.min(0.1, clock.getDelta());
+      frameCount++;
 
-      // Smooth pointer lerp
       smoothedPointerRef.current.x += (mousePointerRef.current.x - smoothedPointerRef.current.x) * 0.08;
       smoothedPointerRef.current.y += (mousePointerRef.current.y - smoothedPointerRef.current.y) * 0.08;
 
-      // Earth & Clouds Continuous Rotation
       if (earthMeshRef.current) {
         earthMeshRef.current.rotation.y += delta * 0.025;
       }
       if (cloudsMeshRef.current) {
         cloudsMeshRef.current.rotation.y += delta * 0.038;
       }
-      if (moonGroupRef.current) {
-        moonGroupRef.current.rotation.y += delta * 0.008;
+      if (moonMeshRef.current) {
+        const t = clock.getElapsedTime() * 0.15;
+        moonMeshRef.current.position.x = Math.cos(t) * 70;
+        moonMeshRef.current.position.z = Math.sin(t) * 70;
       }
       if (goldenRecordMeshRef.current) {
         goldenRecordMeshRef.current.rotation.z += delta * 0.35;
       }
       starField.rotation.y += delta * 0.0015;
 
-      // Dust motes gentle drift
       if (dustParticlesRef.current) {
         dustParticlesRef.current.rotation.y += delta * 0.006;
         dustParticlesRef.current.position.x = smoothedPointerRef.current.x * 12;
         dustParticlesRef.current.position.y = smoothedPointerRef.current.y * 8;
       }
 
-      // FRAME-BY-FRAME BUTTERY SMOOTH CAMERA INTERPOLATION
-      // Calculates every single frame (60-120fps) — ZERO STUTTER!
+      // Smooth Camera Interpolation
       const currentMode = viewModeRef.current;
       const t = Math.min(270, currentTimeRef.current);
 
@@ -568,13 +603,76 @@ export const CosmicCanvas: React.FC<CosmicCanvasProps> = ({
         targetLookAtRef.current.set(0, 0, 0);
       }
 
-      // Smooth dampening towards target
       const lerpSpeed = Math.min(1, delta * 3.5);
       currentCameraPosRef.current.lerp(targetCameraPosRef.current, lerpSpeed);
       currentLookAtRef.current.lerp(targetLookAtRef.current, lerpSpeed);
 
       camera.position.copy(currentCameraPosRef.current);
       camera.lookAt(currentLookAtRef.current);
+
+      // Project Celestial Body screen coordinates for UI annotations (every 2 frames)
+      if (onUpdateTargets && frameCount % 2 === 0 && container) {
+        const w = container.clientWidth;
+        const h = container.clientHeight;
+
+        const project = (pos: THREE.Vector3) => {
+          const v = pos.clone().project(camera);
+          const isBehind = v.z > 1;
+          const x = (v.x * 0.5 + 0.5) * w;
+          const y = (-(v.y * 0.5) + 0.5) * h;
+          return { x, y, visible: !isBehind && x >= 20 && x <= w - 20 && y >= 20 && y <= h - 20 };
+        };
+
+        const targets: CelestialBodyTarget[] = [
+          {
+            id: 'earth',
+            name: 'EARTH',
+            jpName: '地球',
+            tagline: '0.12 pixel in a sunbeam',
+            distance: '6.06B km',
+            worldPos: new THREE.Vector3(0, 0, 0),
+            screenPos: project(new THREE.Vector3(0, 0, 0))
+          },
+          {
+            id: 'moon',
+            name: 'LUNA',
+            jpName: '月',
+            tagline: 'Only natural satellite',
+            distance: '384,400 km',
+            worldPos: moonMeshRef.current ? moonMeshRef.current.position : new THREE.Vector3(65, 12, -20),
+            screenPos: project(moonMeshRef.current ? moonMeshRef.current.position : new THREE.Vector3(65, 12, -20))
+          },
+          {
+            id: 'sun',
+            name: 'SOL',
+            jpName: '太陽',
+            tagline: 'The mother star',
+            distance: '40.47 AU',
+            worldPos: new THREE.Vector3(480, 180, -800),
+            screenPos: project(new THREE.Vector3(480, 180, -800))
+          },
+          {
+            id: 'mars',
+            name: 'MARS',
+            jpName: '火星',
+            tagline: 'The red neighbor',
+            distance: '1.52 AU',
+            worldPos: new THREE.Vector3(-280, 80, -350),
+            screenPos: project(new THREE.Vector3(-280, 80, -350))
+          },
+          {
+            id: 'jupiter',
+            name: 'JUPITER',
+            jpName: '木星',
+            tagline: 'Voyager flyby 1979',
+            distance: '5.20 AU',
+            worldPos: new THREE.Vector3(340, -110, -520),
+            screenPos: project(new THREE.Vector3(340, -110, -520))
+          }
+        ];
+
+        onUpdateTargets(targets);
+      }
 
       renderer.render(scene, camera);
     };

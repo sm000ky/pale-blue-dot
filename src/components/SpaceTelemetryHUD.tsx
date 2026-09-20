@@ -80,17 +80,16 @@ export const SpaceTelemetryHUD: React.FC<SpaceTelemetryHUDProps> = ({
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-  // Render magnetic kinetic subtitle text with highlighted key terms
-  const renderSubtitleText = () => {
+  // Render pure typography with ZERO black background box
+  const renderSubtitleContent = () => {
     if (!currentCue) return null;
 
     const highlightWords = (text: string) => {
-      // Highlight poetic anchor words with glowing cyan
       const regex = /(titik|rumah|debu|bumi|kita|panggung|sungai darah|piksel|dot|home|us|mote of dust|earth|rivers of blood|pixel|pale blue dot|地球|家|点|血の河)/gi;
       const parts = text.split(regex);
       return parts.map((part, i) =>
         regex.test(part) ? (
-          <span key={i} className="text-[#89cff0] font-medium drop-shadow-[0_0_8px_rgba(137,207,240,0.5)]">
+          <span key={i} className="text-[#89cff0] font-medium drop-shadow-[0_0_12px_rgba(137,207,240,0.6)]">
             {part}
           </span>
         ) : (
@@ -100,9 +99,9 @@ export const SpaceTelemetryHUD: React.FC<SpaceTelemetryHUDProps> = ({
     };
 
     return (
-      <div key={currentCue.id} className="space-y-1 text-center animate-ethereal">
+      <div className="space-y-1 text-center max-w-xl mx-auto">
         {currentCue.chapter && (
-          <div className="flex items-center justify-center gap-1.5 font-mono text-[8px] tracking-[0.3em] text-[#89cff0] uppercase pb-0.5">
+          <div className="flex items-center justify-center gap-1.5 font-mono text-[8px] tracking-[0.3em] text-[#89cff0]/80 uppercase pb-0.5">
             <Sparkles className="w-2.5 h-2.5" />
             <span>{currentCue.chapter}</span>
           </div>
@@ -110,10 +109,10 @@ export const SpaceTelemetryHUD: React.FC<SpaceTelemetryHUDProps> = ({
 
         {language === 'id' && (
           <>
-            <p className="font-serif text-xs md:text-sm lg:text-[0.95rem] text-[#f4f5f7] leading-relaxed drop-shadow-md tracking-wide">
+            <p className="font-serif text-sm md:text-base text-[#f4f5f7] leading-relaxed drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)] tracking-wide">
               &ldquo;{highlightWords(currentCue.id_lang)}&rdquo;
             </p>
-            <p className="font-mono text-[9px] text-slate-400/70 tracking-wide line-clamp-1 italic">
+            <p className="font-mono text-[9px] text-slate-400/70 tracking-wide line-clamp-1 italic drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
               {currentCue.en}
             </p>
           </>
@@ -121,17 +120,17 @@ export const SpaceTelemetryHUD: React.FC<SpaceTelemetryHUDProps> = ({
 
         {language === 'ja' && (
           <>
-            <p className="font-serif text-xs md:text-sm text-[#f4f5f7] leading-relaxed drop-shadow-md tracking-wide">
+            <p className="font-serif text-sm md:text-base text-[#f4f5f7] leading-relaxed drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)] tracking-wide">
               「{highlightWords(currentCue.ja)}」
             </p>
-            <p className="font-mono text-[9px] text-slate-400/70 tracking-wide line-clamp-1 italic">
+            <p className="font-mono text-[9px] text-slate-400/70 tracking-wide line-clamp-1 italic drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
               {currentCue.en}
             </p>
           </>
         )}
 
         {language === 'en' && (
-          <p className="font-serif text-xs md:text-sm lg:text-[0.95rem] text-[#f4f5f7] leading-relaxed drop-shadow-md tracking-wide">
+          <p className="font-serif text-sm md:text-base text-[#f4f5f7] leading-relaxed drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)] tracking-wide">
             &ldquo;{highlightWords(currentCue.en)}&rdquo;
           </p>
         )}
@@ -175,11 +174,15 @@ export const SpaceTelemetryHUD: React.FC<SpaceTelemetryHUDProps> = ({
         </div>
       </div>
 
-      {/* Subtitles: Docked at the Lower-Third (Completely Unobtrusive, Center is 100% Free!) */}
-      <div className="pointer-events-none w-full max-w-lg mx-auto mb-1 text-center px-4">
-        {showSubtitles && currentCue && (
-          <div className="bg-[#050811]/80 backdrop-blur-md border border-white/10 px-4 py-2.5 rounded-2xl shadow-2xl inline-block max-w-full">
-            {renderSubtitleText()}
+      {/* Subtitles: Pure Floating Typography with ZERO Black Box Background (Smooth Organic Fade) */}
+      <div className="pointer-events-none w-full max-w-2xl mx-auto mb-1 text-center px-6">
+        {showSubtitles && (
+          <div
+            className={`transition-all duration-700 ease-out ${
+              currentCue ? 'opacity-100 filter-none translate-y-0' : 'opacity-0 blur-sm translate-y-2'
+            }`}
+          >
+            {renderSubtitleContent()}
           </div>
         )}
       </div>

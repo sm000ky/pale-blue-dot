@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { CosmicCanvas, ViewMode, PlanetPOI } from './components/CosmicCanvas';
+import { CosmicCanvas, ViewMode, PlanetPOI, CelestialBodyTarget } from './components/CosmicCanvas';
 import { SpaceTelemetryHUD } from './components/SpaceTelemetryHUD';
+import { CelestialTargetPins } from './components/CelestialTargetPins';
 import { GoldenRecordVault } from './components/GoldenRecordVault';
 import { EnterVoidOverlay } from './components/EnterVoidOverlay';
 import { PoiCard } from './components/PoiCard';
@@ -17,10 +18,11 @@ export const App: React.FC = () => {
   const [volume, setVolume] = useState<number>(0.85);
   const [isMuted, setIsMuted] = useState<boolean>(false);
 
-  // View, POI & Language state
+  // View, POI, Celestial Targets & Language state
   const [viewMode, setViewMode] = useState<ViewMode>('cinema');
   const [language, setLanguage] = useState<'id' | 'en' | 'ja'>('id');
   const [selectedPoi, setSelectedPoi] = useState<PlanetPOI | null>(null);
+  const [celestialTargets, setCelestialTargets] = useState<CelestialBodyTarget[]>([]);
   const [isVaultOpen, setIsVaultOpen] = useState<boolean>(false);
 
   // Audio elements refs
@@ -97,9 +99,6 @@ export const App: React.FC = () => {
     const handleTimeUpdate = () => {
       setCurrentTime(vocal.currentTime);
 
-      // Dynamic Audio Ducking:
-      // When Carl Sagan speaks, drop music to 28% volume.
-      // During pauses, swell music to 65%!
       const isSpeaking = SUBTITLES.some(
         (c) => vocal.currentTime >= c.start && vocal.currentTime <= c.end
       );
@@ -183,7 +182,11 @@ export const App: React.FC = () => {
         isPlaying={isPlaying}
         selectedPoi={selectedPoi}
         onSelectPoi={setSelectedPoi}
+        onUpdateTargets={setCelestialTargets}
       />
+
+      {/* Subtle Interactive Celestial Target Reticles (Earth, Moon, Sun, Mars, Jupiter) */}
+      <CelestialTargetPins targets={celestialTargets} />
 
       {/* Space Telemetry HUD Overlay */}
       <SpaceTelemetryHUD
