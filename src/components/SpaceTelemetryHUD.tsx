@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Play,
   Pause,
@@ -53,13 +53,31 @@ export const SpaceTelemetryHUD: React.FC<SpaceTelemetryHUDProps> = ({
 }) => {
   const [showSubtitles, setShowSubtitles] = useState<boolean>(true);
 
+  // Smooth Crossfade Buffer State (Prevents text snapping / stiffness on cue change)
+  const [displayedCue, setDisplayedCue] = useState<SubtitleCue | null>(currentCue);
+  const [isFadingOut, setIsFadingOut] = useState<boolean>(false);
+  const fadeTimeoutRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (currentCue?.id !== displayedCue?.id) {
+      // Start smooth organic fade out
+      setIsFadingOut(true);
+      if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current);
+
+      fadeTimeoutRef.current = setTimeout(() => {
+        setDisplayedCue(currentCue);
+        setIsFadingOut(false);
+      }, 280); // 280ms silky fade-out before smooth fade-in
+    }
+  }, [currentCue, displayedCue]);
+
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
     const s = Math.floor(secs % 60);
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // Real NASA JPL ephemeris calculation: 40.47 AU (6,054,558,000 km) down to Earth
+  // Real NASA JPL ephemeris calculation: 40.47 AU down to Earth
   const currentDistanceKm = currentCue?.distanceKm ?? Math.max(12000, 6054558000 * (1 - currentTime / 270));
   const formatDistance = (km: number) => {
     if (km >= 1000000000) {
@@ -80,9 +98,9 @@ export const SpaceTelemetryHUD: React.FC<SpaceTelemetryHUDProps> = ({
 
   const progressPercent = duration > 0 ? (currentTime / duration) * 100 : 0;
 
-  // Render pure typography with ZERO black background box
+  // Pure floating typography with glowing cyan highlights
   const renderSubtitleContent = () => {
-    if (!currentCue) return null;
+    if (!displayedCue) return null;
 
     const highlightWords = (text: string) => {
       const regex = /(titik|rumah|debu|bumi|kita|panggung|sungai darah|piksel|dot|home|us|mote of dust|earth|rivers of blood|pixel|pale blue dot|地球|家|点|血の河)/gi;
@@ -99,39 +117,39 @@ export const SpaceTelemetryHUD: React.FC<SpaceTelemetryHUDProps> = ({
     };
 
     return (
-      <div className="space-y-1 text-center max-w-xl mx-auto">
-        {currentCue.chapter && (
+      <div className="space-y-0.5 text-center max-w-xl mx-auto pointer-events-none select-none">
+        {displayedCue.chapter && (
           <div className="flex items-center justify-center gap-1.5 font-mono text-[8px] tracking-[0.3em] text-[#89cff0]/80 uppercase pb-0.5">
             <Sparkles className="w-2.5 h-2.5" />
-            <span>{currentCue.chapter}</span>
+            <span>{displayedCue.chapter}</span>
           </div>
         )}
 
         {language === 'id' && (
           <>
-            <p className="font-serif text-sm md:text-base text-[#f4f5f7] leading-relaxed drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)] tracking-wide">
-              &ldquo;{highlightWords(currentCue.id_lang)}&rdquo;
+            <p className="font-serif text-xs md:text-sm lg:text-[0.95rem] text-[#f4f5f7] leading-relaxed drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)] tracking-wide">
+              &ldquo;{highlightWords(displayedCue.id_lang)}&rdquo;
             </p>
             <p className="font-mono text-[9px] text-slate-400/70 tracking-wide line-clamp-1 italic drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
-              {currentCue.en}
+              {displayedCue.en}
             </p>
           </>
         )}
 
         {language === 'ja' && (
           <>
-            <p className="font-serif text-sm md:text-base text-[#f4f5f7] leading-relaxed drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)] tracking-wide">
-              「{highlightWords(currentCue.ja)}」
+            <p className="font-serif text-xs md:text-sm text-[#f4f5f7] leading-relaxed drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)] tracking-wide">
+              「{highlightWords(displayedCue.ja)}」
             </p>
             <p className="font-mono text-[9px] text-slate-400/70 tracking-wide line-clamp-1 italic drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
-              {currentCue.en}
+              {displayedCue.en}
             </p>
           </>
         )}
 
         {language === 'en' && (
-          <p className="font-serif text-sm md:text-base text-[#f4f5f7] leading-relaxed drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)] tracking-wide">
-            &ldquo;{highlightWords(currentCue.en)}&rdquo;
+          <p className="font-serif text-xs md:text-sm lg:text-[0.95rem] text-[#f4f5f7] leading-relaxed drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)] tracking-wide">
+            &ldquo;{highlightWords(displayedCue.en)}&rdquo;
           </p>
         )}
       </div>
@@ -139,8 +157,8 @@ export const SpaceTelemetryHUD: React.FC<SpaceTelemetryHUDProps> = ({
   };
 
   return (
-    <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-3.5 md:p-6 z-20 select-none">
-      {/* Top Bar: Minimal Ethereal Telemetry */}
+    <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-3 md:p-5 z-20 select-none">
+      {/* Top Bar: Minimal Ethereal Telemetry (Keeps top 100% clean) */}
       <div className="flex items-start justify-between gap-4">
         {/* Top Left: Mission Identification */}
         <div className="pointer-events-auto flex items-center gap-2.5 opacity-85 hover:opacity-100 transition-opacity">
@@ -174,23 +192,25 @@ export const SpaceTelemetryHUD: React.FC<SpaceTelemetryHUDProps> = ({
         </div>
       </div>
 
-      {/* Subtitles: Pure Floating Typography with ZERO Black Box Background (Smooth Organic Fade) */}
-      <div className="pointer-events-none w-full max-w-2xl mx-auto mb-1 text-center px-6">
-        {showSubtitles && (
-          <div
-            className={`transition-all duration-700 ease-out ${
-              currentCue ? 'opacity-100 filter-none translate-y-0' : 'opacity-0 blur-sm translate-y-2'
-            }`}
-          >
-            {renderSubtitleContent()}
-          </div>
-        )}
-      </div>
+      {/* BOTTOM SECTION: SUBTITLES + SCRUBBER + CONTROLS (Drives everything to the bottom!) */}
+      <div className="pointer-events-auto flex flex-col gap-2 w-full max-w-4xl mx-auto">
+        {/* SUBTITLES DOCKED DIRECTLY AT THE BOTTOM (ZERO BACKGROUND BOX, SEAMLESS FILM DISSOLVE) */}
+        <div className="pointer-events-none w-full px-4 min-h-[46px] flex items-end justify-center">
+          {showSubtitles && (
+            <div
+              className={`transition-all duration-500 ease-out transform ${
+                displayedCue && !isFadingOut
+                  ? 'opacity-100 filter-none translate-y-0 scale-100'
+                  : 'opacity-0 blur-md translate-y-2 scale-[0.98]'
+              }`}
+            >
+              {renderSubtitleContent()}
+            </div>
+          )}
+        </div>
 
-      {/* Bottom Bar: Compact Hairline Scrubber & Controls */}
-      <div className="pointer-events-auto flex flex-col gap-2">
         {/* Hairline Timeline Scrubber */}
-        <div className="flex items-center gap-2.5 font-mono text-[9px] text-slate-500">
+        <div className="flex items-center gap-2.5 font-mono text-[9px] text-slate-500 px-1">
           <span className="w-8 text-right">{formatTime(currentTime)}</span>
           <div
             onClick={(e) => {
