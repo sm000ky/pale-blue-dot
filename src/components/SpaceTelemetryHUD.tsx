@@ -53,23 +53,47 @@ export const SpaceTelemetryHUD: React.FC<SpaceTelemetryHUDProps> = ({
 }) => {
   const [showSubtitles, setShowSubtitles] = useState<boolean>(true);
 
-  // Smooth Crossfade Buffer State (Prevents text snapping / stiffness on cue change)
-  const [displayedCue, setDisplayedCue] = useState<SubtitleCue | null>(currentCue);
-  const [isFadingOut, setIsFadingOut] = useState<boolean>(false);
-  const fadeTimeoutRef = useRef<any>(null);
+  // Organic Hollywood Film Dissolve State Machine
+  // activeCue: The cue text that stays in DOM so it can dissolve out smoothly without snapping!
+  // isVisible: Controls CSS opacity & blur transition
+  const [activeCue, setActiveCue] = useState<SubtitleCue | null>(currentCue);
+  const [isVisible, setIsVisible] = useState<boolean>(Boolean(currentCue));
+  const transitionTimerRef = useRef<any>(null);
 
   useEffect(() => {
-    if (currentCue?.id !== displayedCue?.id) {
-      // Start smooth organic fade out
-      setIsFadingOut(true);
-      if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current);
-
-      fadeTimeoutRef.current = setTimeout(() => {
-        setDisplayedCue(currentCue);
-        setIsFadingOut(false);
-      }, 280); // 280ms silky fade-out before smooth fade-in
+    if (transitionTimerRef.current) {
+      clearTimeout(transitionTimerRef.current);
     }
-  }, [currentCue, displayedCue]);
+
+    if (currentCue) {
+      if (activeCue && activeCue.id !== currentCue.id) {
+        // Cue changed from A to B: Dissolve out A smoothly, then fade in B
+        setIsVisible(false);
+        transitionTimerRef.current = setTimeout(() => {
+          setActiveCue(currentCue);
+          setIsVisible(true);
+        }, 320); // 320ms organic dissolve-out
+      } else {
+        // First cue or reappearing after pause: Fade in directly
+        setActiveCue(currentCue);
+        // Next tick to trigger CSS transition
+        const r = requestAnimationFrame(() => {
+          setIsVisible(true);
+        });
+        return () => cancelAnimationFrame(r);
+      }
+    } else {
+      // Pause in speech: Gently dissolve away (Keep activeCue in DOM so it fades out gracefully!)
+      setIsVisible(false);
+      transitionTimerRef.current = setTimeout(() => {
+        setActiveCue(null);
+      }, 750); // 750ms slow, poetic fade out into the stars
+    }
+
+    return () => {
+      if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
+    };
+  }, [currentCue]);
 
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
@@ -100,7 +124,7 @@ export const SpaceTelemetryHUD: React.FC<SpaceTelemetryHUDProps> = ({
 
   // Pure floating typography with glowing cyan highlights
   const renderSubtitleContent = () => {
-    if (!displayedCue) return null;
+    if (!activeCue) return null;
 
     const highlightWords = (text: string) => {
       const regex = /(titik|rumah|debu|bumi|kita|panggung|sungai darah|piksel|dot|home|us|mote of dust|earth|rivers of blood|pixel|pale blue dot|地球|家|点|血の河)/gi;
@@ -117,39 +141,39 @@ export const SpaceTelemetryHUD: React.FC<SpaceTelemetryHUDProps> = ({
     };
 
     return (
-      <div className="space-y-0.5 text-center max-w-xl mx-auto pointer-events-none select-none">
-        {displayedCue.chapter && (
+      <div className="space-y-0.5 text-center max-w-xl mx-auto pointer-events-none select-none px-4">
+        {activeCue.chapter && (
           <div className="flex items-center justify-center gap-1.5 font-mono text-[8px] tracking-[0.3em] text-[#89cff0]/80 uppercase pb-0.5">
             <Sparkles className="w-2.5 h-2.5" />
-            <span>{displayedCue.chapter}</span>
+            <span>{activeCue.chapter}</span>
           </div>
         )}
 
         {language === 'id' && (
           <>
-            <p className="font-serif text-xs md:text-sm lg:text-[0.95rem] text-[#f4f5f7] leading-relaxed drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)] tracking-wide">
-              &ldquo;{highlightWords(displayedCue.id_lang)}&rdquo;
+            <p className="font-serif text-xs md:text-sm lg:text-[0.95rem] text-[#f4f5f7] leading-relaxed drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)] tracking-wide">
+              &ldquo;{highlightWords(activeCue.id_lang)}&rdquo;
             </p>
             <p className="font-mono text-[9px] text-slate-400/70 tracking-wide line-clamp-1 italic drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
-              {displayedCue.en}
+              {activeCue.en}
             </p>
           </>
         )}
 
         {language === 'ja' && (
           <>
-            <p className="font-serif text-xs md:text-sm text-[#f4f5f7] leading-relaxed drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)] tracking-wide">
-              「{highlightWords(displayedCue.ja)}」
+            <p className="font-serif text-xs md:text-sm text-[#f4f5f7] leading-relaxed drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)] tracking-wide">
+              「{highlightWords(activeCue.ja)}」
             </p>
             <p className="font-mono text-[9px] text-slate-400/70 tracking-wide line-clamp-1 italic drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
-              {displayedCue.en}
+              {activeCue.en}
             </p>
           </>
         )}
 
         {language === 'en' && (
-          <p className="font-serif text-xs md:text-sm lg:text-[0.95rem] text-[#f4f5f7] leading-relaxed drop-shadow-[0_2px_10px_rgba(0,0,0,0.95)] tracking-wide">
-            &ldquo;{highlightWords(displayedCue.en)}&rdquo;
+          <p className="font-serif text-xs md:text-sm lg:text-[0.95rem] text-[#f4f5f7] leading-relaxed drop-shadow-[0_2px_12px_rgba(0,0,0,0.95)] tracking-wide">
+            &ldquo;{highlightWords(activeCue.en)}&rdquo;
           </p>
         )}
       </div>
@@ -192,14 +216,14 @@ export const SpaceTelemetryHUD: React.FC<SpaceTelemetryHUDProps> = ({
         </div>
       </div>
 
-      {/* BOTTOM SECTION: SUBTITLES + SCRUBBER + CONTROLS (Drives everything to the bottom!) */}
+      {/* BOTTOM SECTION: SUBTITLES + SCRUBBER + CONTROLS (Anchored strictly to the bottom margin!) */}
       <div className="pointer-events-auto flex flex-col gap-2 w-full max-w-4xl mx-auto">
-        {/* SUBTITLES DOCKED DIRECTLY AT THE BOTTOM (ZERO BACKGROUND BOX, SEAMLESS FILM DISSOLVE) */}
-        <div className="pointer-events-none w-full px-4 min-h-[46px] flex items-end justify-center">
+        {/* SUBTITLES DOCKED DIRECTLY AT THE BOTTOM (ZERO BACKGROUND BOX, TRUE HOLLYWOOD FILM DISSOLVE) */}
+        <div className="pointer-events-none w-full min-h-[50px] flex items-end justify-center">
           {showSubtitles && (
             <div
-              className={`transition-all duration-500 ease-out transform ${
-                displayedCue && !isFadingOut
+              className={`transition-all duration-700 ease-out transform ${
+                isVisible
                   ? 'opacity-100 filter-none translate-y-0 scale-100'
                   : 'opacity-0 blur-md translate-y-2 scale-[0.98]'
               }`}
